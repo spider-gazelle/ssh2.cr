@@ -241,4 +241,8 @@ lib LibSSH2
   fun agent_get_identity = libssh2_agent_get_identity(agent: Agent, store: AgentPublicKey**, prev: AgentPublicKey*) : Int32
   fun agent_list_identities = libssh2_agent_list_identities(agent: Agent) : Int32
   fun agent_userauth = libssh2_agent_userauth(agent: Agent, username: UInt8*, identity: AgentPublicKey*) : Int32
+
+  fun scp_recv = libssh2_scp_recv(session: Session, path: UInt8*, stat: LibC::Stat*) : Channel
+  fun scp_send = libssh2_scp_send64(session: Session, path: UInt8*, mode: Int32, size: UInt64,
+                                     mtime: LibC::TimeT, atime: LibC::TimeT) : Channel
 end

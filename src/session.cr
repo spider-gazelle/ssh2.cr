@@ -270,6 +270,26 @@ class SSH2::Session
     end
   end
 
+  def scp_send(path, mode, size, mtime, atime)
+    handle = LibSSH2.scp_send(self, path, mode, size, mtime, atime)
+    check_error(LibSSH2.session_last_errno())
+    Channel.new handle
+  end
+
+  # Send a file to the remote host via SCP.
+  def scp_send(path)
+    stat = File::Stat.new(path)
+    scp_send(path, stat.mode, stat.size.to_u64,
+             LibC::TimeT.cast(stat.mtime.to_i), LibC::TimeT.cast(stat.atime.to_i))
+  end
+
+  # Request a file from the remote host via SCP.
+  def scp_recv(path)
+    handle = LibSSH2.scp_recv(self, path, out stat)
+    check_error(LibSSH2.session_last_errno())
+    {Channel.new(handle), File::Stat.new(stat)}
+  end
+
   def finalize
     disconnect if @connected
     LibSSH2.session_free(self)
