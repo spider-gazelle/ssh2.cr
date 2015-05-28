@@ -9,6 +9,7 @@ class SSH2::Channel
 
   def initialize(@session, @handle: LibSSH2::Channel)
     raise SSH2Error.new "invalid handle" unless @handle
+    @closed = false
   end
 
   # Close an active data channel. In practice this means sending an
@@ -18,10 +19,16 @@ class SSH2::Channel
   # end to close its connection as well, follow this command with
   # `wait_closed` or pass `wait` parameter as true.
   def close(wait = false)
+    return if @closed
     ret = LibSSH2.channel_close(self)
     check_error(ret).tap do
+      @closed = true
       wait_closed if wait
     end
+  end
+
+  def closed?
+    @closed
   end
 
   def wait_closed

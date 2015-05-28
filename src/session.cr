@@ -32,7 +32,7 @@ class SSH2::Session
   end
 
   # Login with username using pub/priv key values
-  def login_with(username, privkey, pubkey, passphrase = nil)
+  def login_with_data(username, privkey, pubkey, passphrase = nil)
     ret = LibSSH2.userauth_publickey_frommemory(self, username, username.bytesize,
                                                 pubkey, LibC::SizeT.cast(pubkey.bytesize),
                                                 privkey, LibC::SizeT.cast(privkey.bytesize),
@@ -44,6 +44,18 @@ class SSH2::Session
   def login_with_pubkey(username, privkey, pubkey = nil, passphrase = nil)
     ret = LibSSH2.userauth_publickey_fromfile(self, username, username.bytesize.to_u32, pubkey, privkey, passphrase)
     check_error(ret)
+  end
+
+  # Login with username using SSH agent
+  def login_with_agent(username)
+    agent = Agent.new(self)
+    agent.connect
+    begin
+      agent.list_identities
+      agent.authenticate(username)
+    ensure
+      agent.disconnect
+    end
   end
 
   # Send a SSH_USERAUTH_NONE request to the remote host. Unless the remote host
@@ -247,6 +259,15 @@ class SSH2::Session
   def direct_tcpip(host, port, source_host, source_port)
     handle = LibSSH2.channel_direct_tcpip(self, host, port, source_host, source_port)
     Channel.new self, handle
+  end
+
+  def direct_tcpip(host, port, source_host, source_port)
+    channel = direct_tcpip(host, port, source_host, source_port)
+    begin
+      yield channel
+    ensure
+      channel.close
+    end
   end
 
   def finalize

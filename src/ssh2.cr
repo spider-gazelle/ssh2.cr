@@ -32,3 +32,4 @@ end
 require "./session"
 require "./channel"
 require "./listener"
+require "./agent"

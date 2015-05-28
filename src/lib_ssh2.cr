@@ -224,4 +224,21 @@ lib LibSSH2
                                                                  queue_maxsize: Int32) : Listener
   fun channel_forward_accept = libssh2_channel_forward_accept(listener: Listener) : Channel
   fun channel_forward_cancel = libssh2_channel_forward_cancel(listener: Listener) : Int32
+
+  alias Agent = Void*
+  struct AgentPublicKey
+    magic: UInt32
+    node: Void*
+    blob: UInt8*
+    blob_len: LibC::SizeT
+    comment: UInt8*
+  end
+
+  fun agent_init = libssh2_agent_init(session: Session) : Agent
+  fun agent_free = libssh2_agent_free(agent: Agent)
+  fun agent_connect = libssh2_agent_connect(agent: Agent) : Int32
+  fun agent_disconnect = libssh2_agent_disconnect(agent: Agent) : Int32
+  fun agent_get_identity = libssh2_agent_get_identity(agent: Agent, store: AgentPublicKey**, prev: AgentPublicKey*) : Int32
+  fun agent_list_identities = libssh2_agent_list_identities(agent: Agent) : Int32
+  fun agent_userauth = libssh2_agent_userauth(agent: Agent, username: UInt8*, identity: AgentPublicKey*) : Int32
 end
