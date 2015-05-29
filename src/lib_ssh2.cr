@@ -66,11 +66,61 @@ lib LibSSH2
     ILLEGAL_USER_NAME              = 15
   end
 
+  @[Flags]
+  enum Trace
+    TRANS     = (1<<1)
+    KEX       = (1<<2)
+    AUTH      = (1<<3)
+    CONN      = (1<<4)
+    SCP       = (1<<5)
+    SFTP      = (1<<6)
+    ERROR     = (1<<7)
+    PUBLICKEY = (1<<8)
+    SOCKET    = (1<<9)
+  end
+
+  # HACK: the latest version of Mac OSX (kernel 14.3.0 and higher) uses macro _DARWIN_FEATURE_64_BIT_INODE
+  # to modify the definition of `struct stat`. In particular, stat has one additional timestamp called
+  # `st_btimespec` which contains file creation date and also increases the size of `ino_t` type from 32 to 64
+  # bits. So we have to redefine LibC::Stat here, otherwise methods that use this struct populate its fields
+  # incorrectly.
+  # See https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man2/stat.2.html
+  ifdef darwin
+    ifdef x86_64
+      struct Stat
+        st_dev : Int32
+        st_mode : LibC::ModeT
+        st_nlink : UInt16
+        st_ino : Int64
+        st_uid : UInt32
+        st_gid : UInt32
+        st_rdev : Int32
+        st_atimespec : LibC::TimeSpec
+        st_mtimespec : LibC::TimeSpec
+        st_ctimespec : LibC::TimeSpec
+        st_btimespec : LibC::TimeSpec
+        st_size : Int64
+        st_blocks : Int64
+        st_blksize : Int32
+        st_flags : UInt32
+        st_gen : UInt32
+        st_lspare : Int32
+        st_qspare1 : Int64
+        st_qspare2 : Int64
+      end
+    else
+      alias Stat = LibC::Stat
+    end
+  else
+    alias Stat = LibC::Stat
+  end
+
   ERROR_NONE   = 0
   ERROR_EAGAIN = -37
 
   fun session_init = libssh2_session_init_ex(alloc: Void*, free: Void*, realloc: Void*, user_data: Void*) : Session
   fun session_free = libssh2_session_free(session: Session) : Int32
+  fun trace = libssh2_trace(session: Session, bitmask: Trace)
   fun session_handshake = libssh2_session_handshake(session: Session, socket: Int32) : Int32
   fun session_banner_get = libssh2_session_banner_get(session: Session) : UInt8*
   fun session_banner_set = libssh2_session_banner_set(session: Session, banner: UInt8*) : Int32
@@ -242,7 +292,7 @@ lib LibSSH2
   fun agent_list_identities = libssh2_agent_list_identities(agent: Agent) : Int32
   fun agent_userauth = libssh2_agent_userauth(agent: Agent, username: UInt8*, identity: AgentPublicKey*) : Int32
 
-  fun scp_recv = libssh2_scp_recv(session: Session, path: UInt8*, stat: LibC::Stat*) : Channel
+  fun scp_recv = libssh2_scp_recv(session: Session, path: UInt8*, stat: Stat*) : Channel
   fun scp_send = libssh2_scp_send64(session: Session, path: UInt8*, mode: Int32, size: UInt64,
                                      mtime: LibC::TimeT, atime: LibC::TimeT) : Channel
 end

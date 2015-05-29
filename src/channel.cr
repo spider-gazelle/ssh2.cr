@@ -62,30 +62,6 @@ class SSH2::Channel
     check_error(ret)
   end
 
-  # Flush channel
-  def flush
-    ret = LibSSH2.channel_flush(self, 0)
-    check_error(ret)
-  end
-
-  # Flush stderr
-  def flush_stderr
-    ret = LibSSH2.channel_flush(self, LibSSH2::SSH_EXTENDED_DATA_STDERR)
-    check_error(ret)
-  end
-
-  # Flush all substreams
-  def flush_all
-    ret = LibSSH2.channel_flush(self, LibSSH2::CHANNEL_FLUSH_ALL)
-    check_error(ret)
-  end
-
-  # Flush all extended data substreams
-  def flush_extended_data
-    ret = LibSSH2.channel_flush(self, LibSSH2::CHANNEL_FLUSH_EXTENDED_DATA)
-    check_error(ret)
-  end
-
   # Return a tuple with first field populated with the exit signal (without
   # leading "SIG"), and the second field populated with the error message.
   def exit_signal
@@ -97,7 +73,7 @@ class SSH2::Channel
     {exitsignal_str, errmsg_str}
   end
 
-  # LibSSH2::ExtendedData::NORMAL - Queue extended data for eventual reading 
+  # LibSSH2::ExtendedData::NORMAL - Queue extended data for eventual reading
   # LibSSH2::ExtendedData::MERGE  - Treat extended data and ordinary data the
   # same. Merge all substreams such that calls to `read`, will pull from all
   # substreams on a first-in/first-out basis.
@@ -107,24 +83,60 @@ class SSH2::Channel
     check_error(ret)
   end
 
-  def read(slice: Slice(UInt8), length)
-    ret = LibSSH2.channel_read(self, 0, slice.pointer(length), LibC::SizeT.cast(length))
+  def read(stream_id, slice: Slice(UInt8), length)
+    ret = LibSSH2.channel_read(self, stream_id, slice.pointer(length), LibC::SizeT.cast(length))
     check_error(ret)
   end
 
-  def read_stderr(slice: Slice(UInt8), length)
-    ret = LibSSH2.channel_read(self, LibSSH2::SSH_EXTENDED_DATA_STDERR, slice.pointer(length), LibC::SizeT.cast(length))
+  def write(stream_id, slice: Slice(UInt8), length)
+    ret = LibSSH2.channel_write(self, stream_id, slice.pointer(length), LibC::SizeT.cast(length))
     check_error(ret)
+  end
+
+  def read(slice: Slice(UInt8), length)
+    return 0 if eof?
+    read(0, slice, length)
   end
 
   def write(slice: Slice(UInt8), length)
-    ret = LibSSH2.channel_write(self, 0, slice.pointer(length), LibC::SizeT.cast(length))
-    check_error(ret)
+    write(0, slice, length)
+  end
+
+  def read_stderr(slice: Slice(UInt8), length)
+    read(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice, length)
   end
 
   def write_stderr(slice: Slice(UInt8), length)
-    ret = LibSSH2.channel_write(self, LibSSH2::SSH_EXTENDED_DATA_STDERR, slice.pointer(length), LibC::SizeT.cast(length))
+    write(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice, length)
+  end
+
+  # Flush channel
+  def flush(stream_id = 0)
+    ret = LibSSH2.channel_flush(self, stream_id)
     check_error(ret)
+  end
+
+  # Flush stderr
+  def flush_stderr
+    flush(LibSSH2::SSH_EXTENDED_DATA_STDERR)
+  end
+
+  # Flush all substreams
+  def flush_all
+    flush(LibSSH2::CHANNEL_FLUSH_ALL)
+  end
+
+  # Flush all extended data substreams
+  def flush_extended_data
+    flush(LibSSH2::CHANNEL_FLUSH_EXTENDED_DATA)
+  end
+
+  def err_stream
+    StreamIO.new(self, LibSSH2::SSH_EXTENDED_DATA_STDERR)
+  end
+
+  def stream(stream_id)
+    StreamIO.new(self, stream_id)
   end
 
   # Adjust the receive window for a channel by adjustment bytes. If the amount
@@ -192,26 +204,25 @@ class SSH2::Channel
     SessionError.check_error(@session, code)
   end
 
-  struct IOErr
+  struct StreamIO
     include IO
 
-    def initialize(@channel)
+    getter channel
+    getter stream_id
+
+    def initialize(@channel, @stream_id)
     end
 
     def read(slice: Slice(UInt8), length)
-      @channel.read_stderr(slice, length)
+      @channel.read(@stream_id, slice, length)
     end
 
     def write(slice: Slice(UInt8), length)
-      @channel.write_stderr(slice, length)
+      @channel.write(@stream_id, slice, length)
     end
 
     def flush
-      @channel.flush_stderr
+      @channel.flush(@stream_id)
     end
-  end
-
-  def io_err
-    IOErr.new(self)
   end
 end

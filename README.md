@@ -1,0 +1,55 @@
+# ssh2.cr
+
+This library provides binding for libssh2 library.
+
+# Status
+
+*Alpha*
+
+# Requirements
+
+- Crystal language version 0.7.1 and higher.
+- libssh2 version 1.5.0 or higher
+
+You can use `homebrew` to install the latest libssh2:
+
+```
+$ brew install libssh2
+```
+
+# Goal
+
+The goal is to utilize libssh2 API by providing services like ability to run
+shell commands via ssh as well as scp and sftp services.
+
+# Usage
+
+An example of running a shell command via SSH on the remote server:
+
+```crystal
+require "./src/ssh2"
+
+SSH2::Session.open("my_server") do |session|
+  session.login("username", "password")
+  session.open_session do |channel|
+    channel.command("uptime")
+    IO.copy(channel, STDOUT)
+  end
+end
+```
+
+# Testing
+
+In order to run test suite you need to pull and run the following docker container:
+
+```
+$ docker pull tutum/ubuntu:trusty 
+$ docker run -d -p 2222:22 -e AUTHORIZED_KEYS="`cat ./spec/keys/id_rsa.pub`" tutum/ubuntu:trusty
+```
+
+# License
+
+MIT clause - see LICENSE for more details.
+
+
+

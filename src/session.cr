@@ -270,24 +270,87 @@ class SSH2::Session
     end
   end
 
+  # Send a file to the remote host via SCP.
   def scp_send(path, mode, size, mtime, atime)
-    handle = LibSSH2.scp_send(self, path, mode, size, mtime, atime)
-    check_error(LibSSH2.session_last_errno())
-    Channel.new handle
+    handle = LibSSH2.scp_send(self, path, mode.to_i32, size.to_u64,
+                              LibC::TimeT.cast(mtime), LibC::TimeT.cast(atime))
+    check_error(LibSSH2.session_last_errno(self))
+    Channel.new self, handle
   end
 
   # Send a file to the remote host via SCP.
-  def scp_send(path)
-    stat = File::Stat.new(path)
-    scp_send(path, stat.mode, stat.size.to_u64,
-             LibC::TimeT.cast(stat.mtime.to_i), LibC::TimeT.cast(stat.atime.to_i))
+  # A new channel is passed to the block and closed afterwards.
+  def scp_send(path, mode, size, mtime = Time.now.to_i, atime = Time.now.to_i)
+    channel = scp_send(path, mode, size, mtime, atime)
+    begin
+      yield channel
+    ensure
+      channel.close
+    end
+  end
+
+  # Send a file from a local filesystem to the remote host via SCP.
+  def scp_send_file(path)
+    if LibC.stat(path, out stat) != 0
+      raise Errno.new("Unable to get stat for '#{path}'")
+    end
+    scp_send(path, (stat.st_mode & 0x3ff).to_i32, stat.st_size.to_u64,
+             stat.st_mtimespec.tv_sec, stat.st_atimespec.tv_sec) do |ch|
+      File.open(path, "r") do |f|
+        IO.copy(f, ch)
+      end
+    end
   end
 
   # Request a file from the remote host via SCP.
   def scp_recv(path)
     handle = LibSSH2.scp_recv(self, path, out stat)
-    check_error(LibSSH2.session_last_errno())
-    {Channel.new(handle), File::Stat.new(stat)}
+    check_error(LibSSH2.session_last_errno(self))
+    {Channel.new(self, handle), stat}
+  end
+
+  # Request a file from the remote host via SCP.
+  # A new channel is passed to the block and closed afterwards.
+  def scp_recv(path)
+    channel, stat = scp_recv(path)
+    begin
+      yield channel, stat
+    ensure
+      channel.close
+    end
+  end
+
+  # Download a file from the remote host via SCP to the local filesystem.
+  def scp_recv_file(path, local_path = path)
+    min = -> (x: Int32|Int64, y: Int32|Int64) { x < y ? x : y}
+
+    # libssh2 scp_recv method has a bug where its channel's read method doesn't
+    # return 0 value to indicate the end of file(EOF). The only way to find EOF
+    # is to download the exact amount of bytes equal to the file size obtained
+    # from Stat struct.
+    scp_recv(path) do |ch, stat|
+      file_size = stat.st_size
+      read_bytes = 0
+      File.open(local_path, "w") do |f|
+        buf :: UInt8[1024]
+        while read_bytes < file_size
+          bytes_to_read = min.call(buf.length, file_size - read_bytes)
+          len = ch.read(buf.to_slice, bytes_to_read).to_i32
+          f.write(buf.to_slice, len)
+          break if len <= 0
+          read_bytes += len
+        end
+      end
+      if file_size != read_bytes
+        File.delete(local_path)
+        raise SSH2Error.new "Premature end of file"
+      end
+    end
+  end
+
+  # Set the trace option. Only available if libssh2 is compliled with debug mode.
+  def trace(bitmask: LibSSH2::Trace)
+    LibSSH2.trace(self, bitmask)
   end
 
   def finalize
