@@ -24,6 +24,8 @@ SSH2::Session.open("localhost", 2222) do |session|
     session.blocking = false
 
     # process_loop(ch)
+
+    # THE FOLLOWING LINE CRASHES COMPILER
     loop {}
   end
 end
