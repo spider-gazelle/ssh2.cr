@@ -167,8 +167,8 @@ class SSH2::Session
   # hostkey and its type.
   def hostkey
     handle = LibSSH2.session_hostkey(self, out len, out ty)
-    return nil unless handle
-    {Slice.new(handle, len), LibSSH2::HostKeyType.new(ty)}
+    raise SSH2Error.new "unable to obtain hostkey" unless handle
+    {Slice.new(handle, len.to_i32), LibSSH2::HostKeyType.new(ty)}
   end
 
   # Set preferred methods to be negotiated. These preferences must be set prior
@@ -214,7 +214,7 @@ class SSH2::Session
   # (the default) to disable keepalives. To avoid some busy-loop corner-cases,
   # if you specify an interval of 1 it will be treated as 2.
   def keepalive_config(want_reply, interval)
-    LibSSH2.keepalive_config(self, want_reply, interval)
+    LibSSH2.keepalive_config(self, want_reply.to_i32, interval.to_u32)
   end
 
   # Return `KnownHosts` object that allows managing known hosts

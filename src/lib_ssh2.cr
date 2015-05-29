@@ -176,12 +176,9 @@ lib LibSSH2
     SHA1          = 2
     CUSTOM        = 3
 
-    KEYENC_MASK   = (3<<16)
     KEYENC_RAW    = (1<<16)
     KEYENC_BASE64 = (2<<16)
 
-    KEY_MASK      = (7<<18)
-    KEY_SHIFT     = 18
     KEY_RSA1      = (1<<18)
     KEY_SSHRSA    = (2<<18)
     KEY_SSHDSS    = (3<<18)

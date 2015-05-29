@@ -16,21 +16,14 @@ class SSH2::KnownHosts
   end
 
   def add(host, salt, key, comment, typemask: LibSSH2::TypeMask)
-    ret = LibSSH2.knownhost_add(self, host, salt, key, key.length, comment, comment.bytesize, typemask, out store)
+    ret = LibSSH2.knownhost_add(self, host, salt, key, key.length.to_u64,
+                                comment, comment.bytesize.to_u64, typemask, out store)
     check_error(ret)
     store
   end
 
-  def check(host, key, typemask: LibSSH2::TypeMask)
-    ret = LibSSH2.knownhost_check(self, host, key, key.length, typemask, out store)
-    check_error(ret)
-    conv_to_host(store)
-  end
-
-  def checkp(host, port, key, typemask: LibSSH2::TypeMask)
-    ret = LibSSH2.knownhost_checkp(self, host, port, key, key.length, typemask, out store)
-    check_error(ret)
-    conv_to_host(store)
+  def check(host, port, key, typemask: LibSSH2::TypeMask)
+    LibSSH2.knownhost_checkp(self, host, port, key, key.length.to_u64, typemask, out store)
   end
 
   def delete_if
