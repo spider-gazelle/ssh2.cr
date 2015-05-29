@@ -4,6 +4,7 @@ require "spec"
 def connect_ssh
   SSH2::Session.open("localhost", 2222) do |session|
     session.login_with_pubkey("root", "./spec/keys/id_rsa")
+    session.authenticated?.should be_true
     yield session
   end
 end
@@ -15,6 +16,7 @@ describe SSH2 do
         channel.command("uptime")
         resp = channel.read_line
         resp.match(/load average/).should_not be_nil
+        channel.exit_status.should eq(0)
       end
     end
   end
@@ -66,5 +68,6 @@ describe SSH2::KnownHosts do
       host = known_hosts.check("localhost", 2222, key, LibSSH2::TypeMask::PLAIN | LibSSH2::TypeMask::KEYENC_RAW)
       host.should eq(LibSSH2::KnownHostCheck::MATCH)
     end
+    File.delete("known_hosts")
   end
 end

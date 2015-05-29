@@ -73,6 +73,13 @@ class SSH2::Channel
     {exitsignal_str, errmsg_str}
   end
 
+  # Returns the exit code raised by the process running on the remote host at
+  # the other end of the named channel. Note that the exit status may not be
+  # available if the remote end has not yet set its status to closed.
+  def exit_status
+    LibSSH2.channel_get_exit_status(self)
+  end
+
   # LibSSH2::ExtendedData::NORMAL - Queue extended data for eventual reading
   # LibSSH2::ExtendedData::MERGE  - Treat extended data and ordinary data the
   # same. Merge all substreams such that calls to `read`, will pull from all
@@ -152,9 +159,11 @@ class SSH2::Channel
   # Request a PTY on an established channel. Note that this does not make sense
   # for all channel types and may be ignored by the server despite returning
   # success.
-  def request_pty(term, modes, width, height, width_px, height_px)
-    ret = LibSSH2.channel_request_pty(self, term, term.bytesize.to_u32, modes, modes.bytesize.to_u32,
-                                   width, height, width_px, height_px)
+  def request_pty(term, modes = nil, width = LibSSH2::TERM_WIDTH, height = LibSSH2::TERM_HEIGHT,
+                  width_px = LibSSH2::TERM_WIDTH_PX, height_px = LibSSH2::TERM_HEIGHT_PX)
+    ret = LibSSH2.channel_request_pty(self, term, term.bytesize.to_u32,
+                                      modes, modes ? modes.bytesize.to_u32 : 0_u32,
+                                      width, height, width_px, height_px)
     check_error(ret)
   end
 

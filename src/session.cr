@@ -1,6 +1,8 @@
 require "socket"
 
 class SSH2::Session
+  getter socket
+
   def initialize
     @handle = LibSSH2.session_init(nil, nil, nil, nil)
     raise SSH2Error.new "unable to initialize session" unless @handle
