@@ -8,7 +8,7 @@ module SSH2
       @code = LibSSH2.session_last_errno(session)
       LibSSH2.session_last_error(session, out errmsg, out errmsg_len, 0)
       @msg = String.new errmsg, errmsg_len
-      super("#{@code}: #{@msg}")
+      super("ERR #{@code}: #{@msg}")
     end
 
     def self.check_error(session, code)
@@ -34,3 +34,4 @@ require "./channel"
 require "./listener"
 require "./agent"
 require "./known_hosts"
+require "./sftp/*"

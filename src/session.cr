@@ -350,6 +350,25 @@ class SSH2::Session
     end
   end
 
+  # Open a channel and initialize the SFTP subsystem.
+  # Returns a new SFTP instance
+  def sftp_session
+    handle = LibSSH2.sftp_init(self)
+    unless handle
+      check_error(LibSSH2.session_last_errno(self))
+    end
+    SFTP::Session.new(self, handle)
+  end
+
+  def sftp_session
+    sftp = sftp_session
+    begin
+      yield sftp
+    ensure
+      sftp.close
+    end
+  end
+
   # Set the trace option. Only available if libssh2 is compliled with debug mode.
   def trace(bitmask: LibSSH2::Trace)
     LibSSH2.trace(self, bitmask)

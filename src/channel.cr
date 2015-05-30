@@ -7,7 +7,7 @@ class SSH2::Channel
 
   getter session
 
-  def initialize(@session, @handle: LibSSH2::Channel)
+  def initialize(@session, @handle: LibSSH2::Channel, @owned = true)
     raise SSH2Error.new "invalid handle" unless @handle
     @closed = false
   end
@@ -206,7 +206,7 @@ class SSH2::Channel
   end
 
   def finalize
-    LibSSH2.channel_free(@handle)
+    LibSSH2.channel_free(@handle) if @owned
   end
 
   def to_unsafe

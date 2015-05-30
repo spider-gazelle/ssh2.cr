@@ -1,0 +1,95 @@
+module SSH2::SFTP
+  class Session < Base
+    # Returns the underlying channel
+    def channel
+      handle = LibSSH2.sftp_get_channel(self)
+      Channel.new @session, handle, false
+    end
+
+    # Performs lstat(2) operation on `path`
+    def lstat(path)
+      ret = LibSSH2.sftp_stat(self, path, path.bytesize.to_u32, LibSSH2::StatType::LSTAT, out attrs)
+      check_error(ret)
+      Attributes.new attrs
+    end
+
+    # Performs stat(2) operation on `path`
+    def stat(path)
+      ret = LibSSH2.sftp_stat(self, path, path.bytesize.to_u32, LibSSH2::StatType::STAT, out attrs)
+      check_error(ret)
+      Attributes.new attrs
+    end
+
+    # Sets attributes on `path`
+    def setstat(path, attrs: Attributes)
+      ret = LibSSH2.sftp_stat(self, path, path.bytesize.to_u32, LibSSH2::StatType::SETSTAT, attrs)
+      check_error(ret)
+    end
+
+    # Create a directory on the remote file system.
+    def mkdir(path, mode)
+      ret = LibSSH2.sftp_mkdir(self, path, path.bytesize.to_u32, mode.to_i64)
+      check_error(ret)
+    end
+
+    # Opens a remote `filename`.
+    # Returns new SFTP instance.
+    def open(filename, flags = LibSSH2::FXF::None : LibSSH2::FXF, mode = 0)
+      handle = LibSSH2.sftp_open(self, filename, filename.bytesize.to_u32, flags, mode.to_i64, LibSSH2::SFTP_OPENFILE)
+      unless handle
+        check_error(LibSSH2.sftp_last_error(self))
+      end
+      File.new(@session, handle)
+    end
+
+    # Opens a remote `dirname`.
+    # Returns new SFTP instance.
+    def open_dir(dirname, flags = LibSSH2::FXF::None : LibSSH2::FXF, mode = 0)
+      handle = LibSSH2.sftp_open(self, dirname, dirname.bytesize.to_u32, flags, mode.to_i64, LibSSH2::SFTP_OPENDIR)
+      unless handle
+        check_error(LibSSH2.sftp_last_error(self))
+      end
+      Dir.new(@session, handle)
+    end
+
+    # Create a new symlink
+    def symlink(path, target)
+      ret = LibSSH2.sftp_symlink(self, path, path.bytesize.to_u32, target, target_len.to_u32,
+                                 LibSSH2::LinkType::SYMLINK)
+      check_error(ret)
+    end
+
+    def readlink(path)
+      buf_space :: UInt8[512]
+      buf = buf_space.to_slice
+      ret = LibSSH2.sftp_symlink(self, path, buf, buf.length.to_u32, LibSSH2::LinkType::READLINK)
+      check_error(ret)
+      String.new buf[0, ret]
+    end
+
+    def readlink(path)
+      buf_space :: UInt8[512]
+      buf = buf_space.to_slice
+      ret = LibSSH2.sftp_symlink(self, path, buf, buf.length.to_u32, LibSSH2::LinkType::REALPATH)
+      check_error(ret)
+      String.new buf[0, ret]
+    end
+
+    def ulink(filename)
+      ret = LibSSH2.sftp_unlink(self, filename, filename.bytesize.to_u32)
+      check_error(ret)
+    end
+
+    # Rename a filesystem object on the remote filesystem.
+    def rename(src, dst, flags = RenameFlags::OVERWRITE : LibSSH2::RenameFlags)
+      ret = LibSSH2.sftp_rename(self, src, src.bytesize.to_u32, dst, dst.bytesize.to_u32, flags)
+      check_error(ret)
+    end
+
+    def close
+      return if @closed
+      @closed = true
+      LibSSH2.sftp_shutdown(@handle)
+    end
+  end
+end

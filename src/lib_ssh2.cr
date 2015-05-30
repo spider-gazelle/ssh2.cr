@@ -115,8 +115,9 @@ lib LibSSH2
     alias Stat = LibC::Stat
   end
 
-  ERROR_NONE   = 0
-  ERROR_EAGAIN = -37
+  ERROR_NONE          = 0
+  ERROR_SFTP_PROTOCOL = -31
+  ERROR_EAGAIN        = -37
 
   fun session_init = libssh2_session_init_ex(alloc: Void*, free: Void*, realloc: Void*, user_data: Void*) : Session
   fun session_free = libssh2_session_free(session: Session) : Int32
@@ -297,4 +298,101 @@ lib LibSSH2
   fun scp_recv = libssh2_scp_recv(session: Session, path: UInt8*, stat: Stat*) : Channel
   fun scp_send = libssh2_scp_send64(session: Session, path: UInt8*, mode: Int32, size: UInt64,
                                      mtime: LibC::TimeT, atime: LibC::TimeT) : Channel
+
+  alias SFTP = Void*
+
+  struct SFTPAttrs
+    flags: UInt64
+    filesize: UInt64
+    uid: UInt64
+    gid: UInt64
+    permissions: UInt64
+    atime: UInt64
+    mtime: UInt64
+  end
+
+  # File type
+  SFTP_S_IFMT   = 0170000     # type of file mask
+  SFTP_S_IFIFO  = 0010000     # named pipe (fifo)
+  SFTP_S_IFCHR  = 0020000     # character special
+  SFTP_S_IFDIR  = 0040000     # directory
+  SFTP_S_IFBLK  = 0060000     # block special
+  SFTP_S_IFREG  = 0100000     # regular
+  SFTP_S_IFLNK  = 0120000     # symbolic link
+  SFTP_S_IFSOCK = 0140000     # socket
+
+  # File mode
+  # Read, write, execute/search by owner
+  SFTP_S_IRWXU = 0000700     # RWX mask for owner
+  SFTP_S_IRUSR = 0000400     # R for owner
+  SFTP_S_IWUSR = 0000200     # W for owner
+  SFTP_S_IXUSR = 0000100     # X for owner
+
+  # Read, write, execute/search by group
+  SFTP_S_IRWXG = 0000070     # RWX mask for group
+  SFTP_S_IRGRP = 0000040     # R for group
+  SFTP_S_IWGRP = 0000020     # W for group
+  SFTP_S_IXGRP = 0000010     # X for group
+
+  # Read, write, execute/search by others
+  SFTP_S_IRWXO = 0000007     # RWX mask for other
+  SFTP_S_IROTH = 0000004     # R for other
+  SFTP_S_IWOTH = 0000002     # W for other
+  SFTP_S_IXOTH = 0000001     # X for other
+
+  enum StatType
+    STAT    = 0
+    LSTAT   = 1
+    SETSTAT = 2
+  end
+
+  @[Flags]
+  enum FXF
+    READ   = 0x00000001
+    WRITE  = 0x00000002
+    APPEND = 0x00000004
+    CREAT  = 0x00000008
+    TRUNC  = 0x00000010
+    EXCL   = 0x00000020
+  end
+
+  SFTP_OPENFILE = 0
+  SFTP_OPENDIR  = 1
+
+  enum LinkType
+    SYMLINK  = 0
+    READLINK = 1
+    REALPATH = 2
+  end
+
+  enum RenameFlags
+    OVERWRITE = 0x00000001
+    ATOMIC    = 0x00000002
+    NATIVE    = 0x00000004
+  end
+
+  fun sftp_init = libssh2_sftp_init(session: Session) : SFTP
+  fun sftp_shutdown = libssh2_sftp_shutdown(sftp: SFTP) : Int32
+  fun sftp_close = libssh2_sftp_close_handle(sftp: SFTP) : Int32
+  fun sftp_fstat = libssh2_sftp_fstat_ex(sftp: SFTP, attrs: SFTPAttrs*, setstat: Int32) : Int32
+  fun sftp_fsync = libssh2_sftp_fsync(sftp: SFTP) : Int32
+  fun sftp_get_channel = libssh2_sftp_get_channel(sftp: SFTP) : Channel
+  fun sftp_last_error = libssh2_sftp_last_error(sftp: SFTP) : UInt64
+  fun sftp_stat = libssh2_sftp_stat_ex(sftp: SFTP, path: UInt8*, path_len: UInt32, stat_type: StatType,
+                                       attrs: SFTPAttrs*) : Int32
+  fun sftp_mkdir = libssh2_sftp_mkdir_ex(sftp: SFTP, path: UInt8*, path_len: UInt32, mode: Int64) : Int32
+  fun sftp_open = libssh2_sftp_open_ex(sftp: SFTP, filename: UInt8*, filename_len: UInt32, flags: FXF,
+                                       mode: Int64, open_type: Int32) : SFTP
+  fun sftp_read = libssh2_sftp_read(sftp: SFTP, buffer: UInt8*, buffer_maxlen: LibC::SizeT) : LibC::SSizeT
+  fun sftp_readdir = libssh2_sftp_readdir_ex(sftp: SFTP, buffer: UInt8*, buf_len: LibC::SizeT,
+                                             longentry: UInt8*, longentry_len: LibC::SizeT, attrs: SFTPAttrs*) : Int32
+  fun sftp_symlink = libssh2_sftp_symlink_ex(sftp: SFTP, path: UInt8*, path_len: UInt32, target: UInt8*, target_len: UInt32,
+                                             link_type: LinkType) : Int32
+  fun sftp_rename = libssh2_sftp_rename_ex(sftp: SFTP, src: UInt8*, src_len: UInt32, dst: UInt8*, dst_len: UInt32,
+                                           flags: RenameFlags) : Int32
+  fun sftp_rmdir = libssh2_sftp_rmdir_ex(sftp: SFTP, path: UInt8*, path_len: UInt32) : Int32
+  fun sftp_seek = libssh2_sftp_seek64(sftp: SFTP, offset: UInt64)
+  fun sftp_tell = libssh2_sftp_tell64(sftp: SFTP) : UInt64
+  fun sftp_unlink = libssh2_sftp_unlink_ex(sftp: SFTP, filename: UInt8*, filename_len: UInt32) : Int32
+  fun sftp_write = libssh2_sftp_write(sftp: SFTP, buffer: UInt8*, count: LibC::SizeT) : LibC::SSizeT
 end
