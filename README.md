@@ -69,6 +69,23 @@ SSH2::Session.open("localhost", 2222) do |session|
 end
 ```
 
+An example of using SFTP API:
+
+```crystal
+require "./src/ssh2"
+
+SSH2::Session.open("localhost", 2222) do |session|
+  session.login_with_pubkey("root", "./spec/keys/id_rsa")
+  session.sftp_session do |sftp|
+    sftp.open_dir(".").ll do |fn|
+      puts fn
+    end
+    file = sftp.open(".bashrc")
+    puts file.read
+  end
+end
+```
+
 # Testing
 
 In order to run test suite you need to pull and run the following docker container:
