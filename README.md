@@ -38,12 +38,43 @@ SSH2::Session.open("my_server") do |session|
 end
 ```
 
+An example of running shell:
+
+```crystal
+require "./src/ssh2"
+
+SSH2::Session.open("localhost", 2222) do |session|
+  session.login_with_pubkey("root", "./spec/keys/id_rsa")
+  session.open_session do |ch|
+    ch.request_pty("vt100")
+    ch.shell
+    session.blocking = false
+
+    buf_space :: UInt8[1024]
+    buf = buf_space.to_slice
+    while 1 == 1
+      io = IO.select([STDIN, ch.socket]).first
+      if io == STDIN
+        command = gets
+        if command
+          ch.write(command.to_slice)
+        end
+      elsif io == ch.socket
+        len = ch.read(buf).to_i32
+        print! String.new buf[0, len]
+        break if ch.eof?
+      end
+    end
+  end
+end
+```
+
 # Testing
 
 In order to run test suite you need to pull and run the following docker container:
 
 ```
-$ docker pull tutum/ubuntu:trusty 
+$ docker pull tutum/ubuntu:trusty
 $ docker run -d -p 2222:22 -e AUTHORIZED_KEYS="`cat ./spec/keys/id_rsa.pub`" tutum/ubuntu:trusty
 ```
 

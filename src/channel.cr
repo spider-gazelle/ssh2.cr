@@ -12,6 +12,10 @@ class SSH2::Channel
     @closed = false
   end
 
+  def socket
+    @session.socket.not_nil!
+  end
+
   # Close an active data channel. In practice this means sending an
   # SSH_MSG_CLOSE packet to the remote host which serves as instruction that no
   # further data will be sent to it. The remote host may still send data back
