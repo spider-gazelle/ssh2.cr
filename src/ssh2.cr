@@ -20,6 +20,8 @@ module SSH2
     end
   end
 
+  class SFTPClosed < SSH2Error; end
+
   unless (rc = LibSSH2.init(0)) == 0
     raise SSH2Error.new "failed to initialize libssh2 (#{rc})"
   end

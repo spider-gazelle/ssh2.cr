@@ -71,3 +71,40 @@ describe SSH2::KnownHosts do
     File.delete("known_hosts")
   end
 end
+
+describe SSH2::SFTP do
+  it "should be able to list directory" do
+    connect_ssh do |ssh|
+      ssh.sftp_session do |sftp|
+        dir = sftp.open_dir(".")
+        files = dir.ls
+        files.empty?.should be_false
+        files.includes?(".bashrc").should be_true
+      end
+    end
+  end
+
+  it "should be able to retrieve a file" do
+    connect_ssh do |ssh|
+      ssh.sftp_session do |sftp|
+        file = sftp.open(".bashrc")
+        attrs = file.fstat
+        attrs.atime.should be_a(Time)
+        attrs.permissions.to_s(8).should eq("100644")
+        file.read.should match(/.bashrc/)
+      end
+    end
+  end
+
+  it "should be able to upload a file" do
+    connect_ssh do |ssh|
+      ssh.sftp_session do |sftp|
+        fn = "#{Time.now.to_i}.txt"
+        file = sftp.open(fn, LibSSH2::FXF::WRITE, 0644)
+        file.puts "hello world!"
+        attrs = file.fstat
+        attrs.size.should eq(13)
+      end
+    end
+  end
+end

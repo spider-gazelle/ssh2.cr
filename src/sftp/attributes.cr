@@ -23,12 +23,8 @@ class SSH2::SFTP::Attributes
     @stat.flags = v.value
   end
 
-  def filesize
+  def size
     @stat.filesize
-  end
-
-  def filesize=(v)
-    @stat.filesize = v.to_u64
   end
 
   def uid

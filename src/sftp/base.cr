@@ -1,4 +1,6 @@
 abstract class SSH2::SFTP::Base
+  getter session
+
   def initialize(@session, @handle)
     raise SSH2Error.new "invalid handle" unless @handle
     @closed = false
@@ -9,6 +11,9 @@ abstract class SSH2::SFTP::Base
   end
 
   def to_unsafe
+    if closed?
+      raise SFTPClosed.new
+    end
     @handle
   end
 

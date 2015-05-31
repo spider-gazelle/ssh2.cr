@@ -39,7 +39,7 @@ module SSH2::SFTP
       unless handle
         check_error(LibSSH2.sftp_last_error(self))
       end
-      File.new(@session, handle)
+      File.new(self, handle)
     end
 
     # Opens a remote `dirname`.
@@ -49,7 +49,7 @@ module SSH2::SFTP
       unless handle
         check_error(LibSSH2.sftp_last_error(self))
       end
-      Dir.new(@session, handle)
+      Dir.new(self, handle)
     end
 
     # Create a new symlink

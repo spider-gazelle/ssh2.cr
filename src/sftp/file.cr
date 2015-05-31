@@ -1,26 +1,8 @@
+require "./node"
+
 module SSH2::SFTP
-  class File < Base
+  class File < Node
     include IO
-
-    # Close an active SFTP instance.
-    def close
-      return if @closed
-      @closed = true
-      LibSSH2.sftp_close(self)
-    end
-
-    # Set file attributes
-    def fstat=(value: Attributes)
-      ret = LibSSH2.sftp_fstat(self, value, 1)
-      check_error(ret)
-    end
-
-    # Get file attributes
-    def fstat
-      ret = LibSSH2.sftp_fstat(self, out value, 0)
-      check_error(ret)
-      Attributes.new value
-    end
 
     # This function causes the remote server to synchronize the file data and
     # metadata to disk (like fsync(2)).
@@ -49,7 +31,7 @@ module SSH2::SFTP
     end
 
     def write(slice: Slice(UInt8), length)
-      ret = LibSSH2.sftp_write(self, slice.pointer(length), LibSSH2::SizeT.cast(length))
+      ret = LibSSH2.sftp_write(self, slice.pointer(length), LibC::SizeT.cast(length))
       check_error(ret)
       ret
     end

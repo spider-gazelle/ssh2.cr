@@ -1,12 +1,7 @@
-module SSH2::SFTP
-  class Dir < Base
-    # Close an active SFTP instance.
-    def close
-      return if @closed
-      @closed = true
-      LibSSH2.sftp_close(self)
-    end
+require "./node"
 
+module SSH2::SFTP
+  class Dir < Node
     # Lists a current directory
     def ls
       loop do
