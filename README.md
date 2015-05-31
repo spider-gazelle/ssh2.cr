@@ -52,7 +52,7 @@ SSH2::Session.open("localhost", 2222) do |session|
 
     buf_space :: UInt8[1024]
     buf = buf_space.to_slice
-    while 1 == 1
+    loop do
       io = IO.select([STDIN, ch.socket]).first
       if io == STDIN
         command = gets

@@ -16,6 +16,7 @@ class SSH2::Session
         yield session
       ensure
         session.disconnect
+        nil
       end
     end
   end
@@ -251,6 +252,7 @@ class SSH2::Session
       yield channel
     ensure
       channel.close
+      nil
     end
   end
 
