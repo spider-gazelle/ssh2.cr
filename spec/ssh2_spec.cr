@@ -100,7 +100,7 @@ describe SSH2::SFTP do
     connect_ssh do |ssh|
       ssh.sftp_session do |sftp|
         fn = "#{Time.now.to_i}.txt"
-        file = sftp.open(fn, LibSSH2::FXF::WRITE, 0644)
+        file = sftp.open(fn, "w", 0644)
         file.puts "hello world!"
         attrs = file.fstat
         attrs.size.should eq(13)

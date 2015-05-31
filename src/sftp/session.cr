@@ -32,9 +32,30 @@ module SSH2::SFTP
       check_error(ret)
     end
 
+    private def convert_to_fxf(mode)
+      flags = LibSSH2::FXF::None
+      if mode.includes?("r")
+        flags |= LibSSH2::FXF::READ
+      end
+      if mode.includes?("w")
+        flags |= LibSSH2::FXF::WRITE
+      end
+      if mode.includes?("+")
+        flags |= LibSSH2::FXF::APPEND
+      end
+      if mode.includes?("c")
+        flags |= LibSSH2::FXF::CREAT
+      end
+      if mode.includes?("!")
+        flags |= LibSSH2::FXF::EXCL
+      end
+      flags
+    end
+
     # Opens a remote `filename`.
     # Returns new SFTP instance.
-    def open(filename, flags = LibSSH2::FXF::None : LibSSH2::FXF, mode = 0)
+    def open(filename, flags = "r", mode = 0)
+      flags = convert_to_fxf(flags)
       handle = LibSSH2.sftp_open(self, filename, filename.bytesize.to_u32, flags, mode.to_i64, LibSSH2::SFTP_OPENFILE)
       unless handle
         check_error(LibSSH2.sftp_last_error(self))
@@ -44,7 +65,8 @@ module SSH2::SFTP
 
     # Opens a remote `dirname`.
     # Returns new SFTP instance.
-    def open_dir(dirname, flags = LibSSH2::FXF::None : LibSSH2::FXF, mode = 0)
+    def open_dir(dirname, flags = "r", mode = 0)
+      flags = convert_to_fxf(flags)
       handle = LibSSH2.sftp_open(self, dirname, dirname.bytesize.to_u32, flags, mode.to_i64, LibSSH2::SFTP_OPENDIR)
       unless handle
         check_error(LibSSH2.sftp_last_error(self))
