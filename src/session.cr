@@ -30,7 +30,8 @@ class SSH2::Session
 
   # Login with username and password
   def login(username, password)
-    ret = LibSSH2.userauth_password(self, username, username.bytesize, password, password.bytesize, nil)
+    ret = LibSSH2.userauth_password(self, username, username.bytesize.to_u32,
+                                    password, password.bytesize.to_u32, nil)
     check_error(ret)
   end
 
