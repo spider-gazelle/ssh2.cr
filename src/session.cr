@@ -37,7 +37,7 @@ class SSH2::Session
 
   # Login with username using pub/priv key values
   def login_with_data(username, privkey, pubkey, passphrase = nil)
-    ret = LibSSH2.userauth_publickey_frommemory(self, username, username.bytesize,
+    ret = LibSSH2.userauth_publickey_frommemory(self, username, username.bytesize.to_u32,
                                                 pubkey, LibC::SizeT.cast(pubkey.bytesize),
                                                 privkey, LibC::SizeT.cast(privkey.bytesize),
                                                 passphrase)
@@ -46,7 +46,8 @@ class SSH2::Session
 
   # Login with username using pub/priv key files
   def login_with_pubkey(username, privkey, pubkey = nil, passphrase = nil)
-    ret = LibSSH2.userauth_publickey_fromfile(self, username, username.bytesize.to_u32, pubkey, privkey, passphrase)
+    ret = LibSSH2.userauth_publickey_fromfile(self, username, username.bytesize.to_u32,
+                                              pubkey, privkey, passphrase)
     check_error(ret)
   end
 
@@ -69,7 +70,7 @@ class SSH2::Session
   # authentication succeeds, this method with return `nil`. This case may be
   # distinguished from a failing case by examining `authenticated?`.
   def login_with_noauth(username)
-    handle = LibSSH2.userauth_list(self, username, username.bytesize)
+    handle = LibSSH2.userauth_list(self, username, username.bytesize.to_u32)
     if handle
       String.new handle
     end
