@@ -15,15 +15,15 @@ class SSH2::KnownHosts
     raise SSH2Error.new "invalid handle" unless @handle
   end
 
-  def add(host, salt, key, comment, typemask: LibSSH2::TypeMask)
-    ret = LibSSH2.knownhost_add(self, host, salt, key, key.length.to_u64,
+  def add(host, salt, key, comment, typemask : LibSSH2::TypeMask)
+    ret = LibSSH2.knownhost_add(self, host, salt, key, key.size.to_u64,
                                 comment, comment.bytesize.to_u64, typemask, out store)
     check_error(ret)
     store
   end
 
-  def check(host, port, key, typemask: LibSSH2::TypeMask)
-    LibSSH2.knownhost_checkp(self, host, port, key, key.length.to_u64, typemask, out store)
+  def check(host, port, key, typemask : LibSSH2::TypeMask)
+    LibSSH2.knownhost_checkp(self, host, port, key, key.size.to_u64, typemask, out store)
   end
 
   def delete_if
@@ -41,7 +41,7 @@ class SSH2::KnownHosts
   end
 
   def read_line(line)
-    ret = LibSSH2.knownhost_readline(self, line, LibC::SizeT.cast(line.length), LibSSH2::KNOWNHOST_FILE_OPENSSH)
+    ret = LibSSH2.knownhost_readline(self, line, LibC::SizeT.new(line.size), LibSSH2::KNOWNHOST_FILE_OPENSSH)
     check_error(ret)
   end
 

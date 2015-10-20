@@ -7,7 +7,7 @@ class SSH2::Channel
 
   getter session
 
-  def initialize(@session, @handle: LibSSH2::Channel, @owned = true)
+  def initialize(@session, @handle : LibSSH2::Channel, @owned = true)
     raise SSH2Error.new "invalid handle" unless @handle
     @closed = false
   end
@@ -89,36 +89,36 @@ class SSH2::Channel
   # same. Merge all substreams such that calls to `read`, will pull from all
   # substreams on a first-in/first-out basis.
   # LibSSH2::ExtendedData::IGNORE - Discard all extended data as it arrives.
-  def handle_extended_data(ignore_mode: LibSSH2::ExtendedData)
+  def handle_extended_data(ignore_mode : LibSSH2::ExtendedData)
     ret = LibSSH2.channel_handle_extended_data(self, ignore_mode)
     check_error(ret)
   end
 
-  def read(stream_id, slice: Slice(UInt8), length)
-    ret = LibSSH2.channel_read(self, stream_id, slice.pointer(length), LibC::SizeT.cast(length))
+  def read(stream_id, slice : Slice(UInt8))
+    ret = LibSSH2.channel_read(self, stream_id, slice, LibC::SizeT.new(slice.bytesize))
     check_error(ret)
   end
 
-  def write(stream_id, slice: Slice(UInt8), length)
-    ret = LibSSH2.channel_write(self, stream_id, slice.pointer(length), LibC::SizeT.cast(length))
+  def write(stream_id, slice : Slice(UInt8))
+    ret = LibSSH2.channel_write(self, stream_id, slice, LibC::SizeT.new(slice.bytesize))
     check_error(ret)
   end
 
-  def read(slice: Slice(UInt8), length)
+  def read(slice : Slice(UInt8))
     return 0 if eof?
-    read(0, slice, length)
+    read(0, slice)
   end
 
-  def write(slice: Slice(UInt8), length)
-    write(0, slice, length)
+  def write(slice : Slice(UInt8))
+    write(0, slice)
   end
 
-  def read_stderr(slice: Slice(UInt8), length)
-    read(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice, length)
+  def read_stderr(slice : Slice(UInt8))
+    read(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
   end
 
-  def write_stderr(slice: Slice(UInt8), length)
-    write(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice, length)
+  def write_stderr(slice : Slice(UInt8))
+    write(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
   end
 
   # Flush channel
@@ -226,12 +226,12 @@ class SSH2::Channel
     def initialize(@channel, @stream_id)
     end
 
-    def read(slice: Slice(UInt8), length)
-      @channel.read(@stream_id, slice, length)
+    def read(slice : Slice(UInt8))
+      @channel.read(@stream_id, slice, slice.bytesize)
     end
 
-    def write(slice: Slice(UInt8), length)
-      @channel.write(@stream_id, slice, length)
+    def write(slice : Slice(UInt8))
+      @channel.write(@stream_id, slice, slice.bytesize)
     end
 
     def flush

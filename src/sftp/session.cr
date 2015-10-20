@@ -21,7 +21,7 @@ module SSH2::SFTP
     end
 
     # Sets attributes on `path`
-    def setstat(path, attrs: Attributes)
+    def setstat(path, attrs : Attributes)
       ret = LibSSH2.sftp_stat(self, path, path.bytesize.to_u32, LibSSH2::StatType::SETSTAT, attrs)
       check_error(ret)
     end
@@ -58,7 +58,7 @@ module SSH2::SFTP
       flags = convert_to_fxf(flags)
       handle = LibSSH2.sftp_open(self, filename, filename.bytesize.to_u32, flags, mode.to_i64, LibSSH2::SFTP_OPENFILE)
       unless handle
-        check_error(LibSSH2.sftp_last_error(self))
+        check_sftp_error
       end
       File.new(self, handle)
     end
@@ -69,7 +69,7 @@ module SSH2::SFTP
       flags = convert_to_fxf(flags)
       handle = LibSSH2.sftp_open(self, dirname, dirname.bytesize.to_u32, flags, mode.to_i64, LibSSH2::SFTP_OPENDIR)
       unless handle
-        check_error(LibSSH2.sftp_last_error(self))
+        check_sftp_error
       end
       Dir.new(self, handle)
     end
@@ -112,6 +112,10 @@ module SSH2::SFTP
       return if @closed
       @closed = true
       LibSSH2.sftp_shutdown(@handle)
+    end
+
+    private def check_sftp_error
+      SFTPError.check_error(LibSSH2.sftp_last_error(self))
     end
   end
 end

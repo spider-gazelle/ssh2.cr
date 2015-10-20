@@ -24,14 +24,14 @@ module SSH2::SFTP
       LibSSH2.sftp_tell(self)
     end
 
-    def read(slice: Slice(UInt8), length)
-      ret = LibSSH2.sftp_read(self, slice.pointer(length), LibC::SizeT.cast(length))
+    def read(slice : Slice(UInt8))
+      ret = LibSSH2.sftp_read(self, slice, LibC::SizeT.new(slice.bytesize))
       check_error(ret)
       ret
     end
 
-    def write(slice: Slice(UInt8), length)
-      ret = LibSSH2.sftp_write(self, slice.pointer(length), LibC::SizeT.cast(length))
+    def write(slice : Slice(UInt8))
+      ret = LibSSH2.sftp_write(self, slice, LibC::SizeT.new(slice.bytesize))
       check_error(ret)
       ret
     end

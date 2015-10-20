@@ -16,7 +16,7 @@ module SSH2::SFTP
     end
 
     # Set file attributes
-    def fstat=(value: Attributes)
+    def fstat=(value : Attributes)
       ret = LibSSH2.sftp_fstat(self, value, 1)
       check_error(ret)
     end

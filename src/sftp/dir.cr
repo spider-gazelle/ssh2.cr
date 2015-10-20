@@ -7,7 +7,7 @@ module SSH2::SFTP
       loop do
         buf_space :: UInt8[512]
         buf = buf_space.to_slice
-        ret = LibSSH2.sftp_readdir(self, buf, LibC::SizeT.cast(buf.length), nil, LibC::SizeT.cast(0), out attrs)
+        ret = LibSSH2.sftp_readdir(self, buf, LibC::SizeT.new(buf.size), nil, LibC::SizeT.new(0), out attrs)
         break if ret == 0
         check_error(ret) if ret < 0
         yield String.new(buf[0, ret])
@@ -27,10 +27,10 @@ module SSH2::SFTP
         buf = buf_space.to_slice
         lbuf_space :: UInt8[512]
         lbuf = lbuf_space.to_slice
-        lbuf.to_unsafe.map!(lbuf.length) { 0_u8 }
+        lbuf.to_unsafe.map!(lbuf.size) { 0_u8 }
 
-        ret = LibSSH2.sftp_readdir(self, buf, LibC::SizeT.cast(buf.length),
-                                   lbuf, LibC::SizeT.cast(lbuf.length), out attrs)
+        ret = LibSSH2.sftp_readdir(self, buf, LibC::SizeT.new(buf.size),
+                                   lbuf, LibC::SizeT.new(lbuf.size), out attrs)
         break if ret == 0
         check_error(ret) if ret < 0
         if lbuf[0] == 0_u8

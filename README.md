@@ -8,7 +8,7 @@ This library provides binding for libssh2 library.
 
 # Requirements
 
-- Crystal language version 0.7.1 and higher.
+- Crystal language version 0.9 and higher.
 - libssh2 version 1.5.0 or higher
 
 You can use `homebrew` to install the latest libssh2:

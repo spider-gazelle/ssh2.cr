@@ -37,8 +37,8 @@ class SSH2::Session
   # Login with username using pub/priv key values
   def login_with_data(username, privkey, pubkey, passphrase = nil)
     ret = LibSSH2.userauth_publickey_frommemory(self, username, username.bytesize.to_u32,
-                                                pubkey, LibC::SizeT.cast(pubkey.bytesize),
-                                                privkey, LibC::SizeT.cast(privkey.bytesize),
+                                                pubkey, LibC::SizeT.new(pubkey.bytesize),
+                                                privkey, LibC::SizeT.new(privkey.bytesize),
                                                 passphrase)
     check_error(ret)
   end
@@ -178,19 +178,19 @@ class SSH2::Session
   # Set preferred methods to be negotiated. These preferences must be set prior
   # to calling `handshake`, as they are used during the protocol initiation
   # phase.
-  def set_method_pref(method_type: LibSSH2::MethodType, value)
+  def set_method_pref(method_type : LibSSH2::MethodType, value)
     ret = LibSSH2.session_method_pref(self, method_type, value)
     check_error(ret)
   end
 
   # Returns the actual method negotiated for a particular transport parameter.
-  def method_pref(method_pref: LibSSH2::MethodType)
+  def method_pref(method_pref : LibSSH2::MethodType)
     handle = LibSSH2.session_methods(self, method_type)
     String.new handle unless handle
   end
 
   # Get a list of supported algorithms for the given method_type.
-  def supported_algs(method_type: LibSSH2::MethodType)
+  def supported_algs(method_type : LibSSH2::MethodType)
     ret = [] of String
     if (count = LibSSH2.session_supported_algs(self, method_type, out algs)) > 0
       count.times do |i|
@@ -277,14 +277,14 @@ class SSH2::Session
   # Send a file to the remote host via SCP.
   def scp_send(path, mode, size, mtime, atime)
     handle = LibSSH2.scp_send(self, path, mode.to_i32, size.to_u64,
-                              LibC::TimeT.cast(mtime), LibC::TimeT.cast(atime))
+                              LibC::TimeT.new(mtime), LibC::TimeT.new(atime))
     check_error(LibSSH2.session_last_errno(self))
     Channel.new self, handle
   end
 
   # Send a file to the remote host via SCP.
   # A new channel is passed to the block and closed afterwards.
-  def scp_send(path, mode, size, mtime = Time.now.to_i, atime = Time.now.to_i)
+  def scp_send(path, mode, size, mtime = Time.now.epoch, atime = Time.now.epoch)
     channel = scp_send(path, mode, size, mtime, atime)
     begin
       yield channel
@@ -326,7 +326,7 @@ class SSH2::Session
 
   # Download a file from the remote host via SCP to the local filesystem.
   def scp_recv_file(path, local_path = path)
-    min = -> (x: Int32|Int64, y: Int32|Int64) { x < y ? x : y}
+    min = -> (x : Int32|Int64, y : Int32|Int64) { x < y ? x : y}
 
     # libssh2 scp_recv method has a bug where its channel's read method doesn't
     # return 0 value to indicate the end of file(EOF). The only way to find EOF
@@ -372,7 +372,7 @@ class SSH2::Session
   end
 
   # Set the trace option. Only available if libssh2 is compliled with debug mode.
-  def trace(bitmask: LibSSH2::Trace)
+  def trace(bitmask : LibSSH2::Trace)
     LibSSH2.trace(self, bitmask)
   end
 

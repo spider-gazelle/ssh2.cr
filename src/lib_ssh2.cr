@@ -312,33 +312,33 @@ lib LibSSH2
   end
 
   # File type
-  SFTP_S_IFMT   = 0170000     # type of file mask
-  SFTP_S_IFIFO  = 0010000     # named pipe (fifo)
-  SFTP_S_IFCHR  = 0020000     # character special
-  SFTP_S_IFDIR  = 0040000     # directory
-  SFTP_S_IFBLK  = 0060000     # block special
-  SFTP_S_IFREG  = 0100000     # regular
-  SFTP_S_IFLNK  = 0120000     # symbolic link
-  SFTP_S_IFSOCK = 0140000     # socket
+  SFTP_S_IFMT   = 0o0170000     # type of file mask
+  SFTP_S_IFIFO  = 0o0010000     # named pipe (fifo)
+  SFTP_S_IFCHR  = 0o0020000     # character special
+  SFTP_S_IFDIR  = 0o0040000     # directory
+  SFTP_S_IFBLK  = 0o0060000     # block special
+  SFTP_S_IFREG  = 0o0100000     # regular
+  SFTP_S_IFLNK  = 0o0120000     # symbolic link
+  SFTP_S_IFSOCK = 0o0140000     # socket
 
   # File mode
   # Read, write, execute/search by owner
-  SFTP_S_IRWXU = 0000700     # RWX mask for owner
-  SFTP_S_IRUSR = 0000400     # R for owner
-  SFTP_S_IWUSR = 0000200     # W for owner
-  SFTP_S_IXUSR = 0000100     # X for owner
+  SFTP_S_IRWXU = 0o0000700     # RWX mask for owner
+  SFTP_S_IRUSR = 0o0000400     # R for owner
+  SFTP_S_IWUSR = 0o0000200     # W for owner
+  SFTP_S_IXUSR = 0o0000100     # X for owner
 
   # Read, write, execute/search by group
-  SFTP_S_IRWXG = 0000070     # RWX mask for group
-  SFTP_S_IRGRP = 0000040     # R for group
-  SFTP_S_IWGRP = 0000020     # W for group
-  SFTP_S_IXGRP = 0000010     # X for group
+  SFTP_S_IRWXG = 0o0000070     # RWX mask for group
+  SFTP_S_IRGRP = 0o0000040     # R for group
+  SFTP_S_IWGRP = 0o0000020     # W for group
+  SFTP_S_IXGRP = 0o0000010     # X for group
 
   # Read, write, execute/search by others
-  SFTP_S_IRWXO = 0000007     # RWX mask for other
-  SFTP_S_IROTH = 0000004     # R for other
-  SFTP_S_IWOTH = 0000002     # W for other
-  SFTP_S_IXOTH = 0000001     # X for other
+  SFTP_S_IRWXO = 0o0000007     # RWX mask for other
+  SFTP_S_IROTH = 0o0000004     # R for other
+  SFTP_S_IWOTH = 0o0000002     # W for other
+  SFTP_S_IXOTH = 0o0000001     # X for other
 
   enum StatType
     STAT    = 0

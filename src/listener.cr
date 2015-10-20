@@ -2,7 +2,7 @@ class SSH2::Listener
   getter session
   getter bound_port
 
-  def initialize(@session, @handle: LibSSH2::Listener, @bound_port)
+  def initialize(@session, @handle : LibSSH2::Listener, @bound_port)
     raise SSH2Error.new "invalid handle" unless @handle
     @canceled = false
   end

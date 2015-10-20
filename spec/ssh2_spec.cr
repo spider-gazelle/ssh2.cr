@@ -22,17 +22,19 @@ describe SSH2 do
   end
 
   it "should be able to scp transfer file" do
-    fn = "#{Time.now.to_i}.txt"
+    fn = "#{Time.now.epoch}.txt"
     connect_ssh do |session|
-      session.scp_send(fn, 0644, 12) do |ch|
+      session.scp_send(fn, 0o0644, 12) do |ch|
         ch.puts "hello world"
       end
       session.open_session do |ch|
         ch.command("ls -l")
-        ch.read.includes?(fn).should be_true
+        ch.gets_to_end.includes?(fn).should be_true
       end
       session.scp_recv(fn) do |ch, st|
-        ch.read(st.st_size.to_i32).should eq("hello world\n")
+        buf = Slice(UInt8).new(st.st_size.to_i32)
+        ch.read(buf)
+        String.new(buf).should eq("hello world\n")
       end
     end
   end
@@ -54,11 +56,11 @@ describe SSH2::KnownHosts do
       end
       known_hosts.add("localhost", "", key, "comment", typemask)
       known_hosts.add("127.0.0.1", "", key, "comment", typemask)
-      known_hosts.count.should eq(2)
+      known_hosts.size.should eq(2)
       known_hosts.map(&.name).includes?("localhost").should be_true
       known_hosts.write_file("known_hosts")
       known_hosts.delete_if {|h| h.name == "localhost"}
-      known_hosts.count.should eq(1)
+      known_hosts.size.should eq(1)
     end
 
     connect_ssh do |session|
@@ -91,7 +93,7 @@ describe SSH2::SFTP do
         attrs = file.fstat
         attrs.atime.should be_a(Time)
         attrs.permissions.to_s(8).should eq("100644")
-        file.read.should match(/.bashrc/)
+        file.gets_to_end.should match(/.bashrc/)
       end
     end
   end
@@ -99,8 +101,8 @@ describe SSH2::SFTP do
   it "should be able to upload a file" do
     connect_ssh do |ssh|
       ssh.sftp_session do |sftp|
-        fn = "#{Time.now.to_i}.txt"
-        file = sftp.open(fn, "w", 0644)
+        fn = "#{Time.now.epoch}_upload.txt"
+        file = sftp.open(fn, "wc", 0o644)
         file.puts "hello world!"
         attrs = file.fstat
         attrs.size.should eq(13)

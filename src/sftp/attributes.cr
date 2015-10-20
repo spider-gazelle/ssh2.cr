@@ -8,7 +8,7 @@ class SSH2::SFTP::Attributes
     EXTENDED    = 0x80000000
   end
 
-  def initialize(@stat: LibSSH2::SFTPAttrs)
+  def initialize(@stat : LibSSH2::SFTPAttrs)
   end
 
   def initialize
@@ -19,7 +19,7 @@ class SSH2::SFTP::Attributes
     Flags.new(@stat.flags)
   end
 
-  def flags=(v: Flags)
+  def flags=(v : Flags)
     @stat.flags = v.value
   end
 
@@ -52,18 +52,18 @@ class SSH2::SFTP::Attributes
   end
 
   def atime
-    Time.at(@stat.atime.to_i32, Time::Kind::Utc)
+    Time.epoch(@stat.atime.to_i32)
   end
 
-  def atime=(v: Time)
+  def atime=(v : Time)
     @stat.atime = v.to_utc.to_i.to_u64
   end
 
   def mtime
-    Time.at(@stat.mtime.to_i32, Time::Kind::Utc)
+    Time.epoch(@stat.mtime.to_i32)
   end
 
-  def mtime=(v: Time)
+  def mtime=(v : Time)
     @stat.mtime = v.to_utc.to_i.to_u64
   end
 
