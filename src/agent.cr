@@ -68,6 +68,6 @@ class SSH2::Agent
   end
 
   private def check_error(code)
-    SessionError.check_error(code)
+    SessionError.check_error(@session, code)
   end
 end
