@@ -82,7 +82,7 @@ module SSH2::SFTP
     end
 
     def readlink(path)
-      buf_space :: UInt8[512]
+      buf_space : UInt8[512]
       buf = buf_space.to_slice
       ret = LibSSH2.sftp_symlink(self, path, buf, buf.length.to_u32, LibSSH2::LinkType::READLINK)
       check_error(ret)
@@ -90,7 +90,7 @@ module SSH2::SFTP
     end
 
     def readlink(path)
-      buf_space :: UInt8[512]
+      buf_space : UInt8[512]
       buf = buf_space.to_slice
       ret = LibSSH2.sftp_symlink(self, path, buf, buf.length.to_u32, LibSSH2::LinkType::REALPATH)
       check_error(ret)
@@ -103,7 +103,7 @@ module SSH2::SFTP
     end
 
     # Rename a filesystem object on the remote filesystem.
-    def rename(src, dst, flags = RenameFlags::OVERWRITE : LibSSH2::RenameFlags)
+    def rename(src, dst, flags : RenameFlags::OVERWRITE | LibSSH2::RenameFlags)
       ret = LibSSH2.sftp_rename(self, src, src.bytesize.to_u32, dst, dst.bytesize.to_u32, flags)
       check_error(ret)
     end
