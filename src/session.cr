@@ -81,7 +81,7 @@ class SSH2::Session
   end
 
   # Returns the current session's host key
-  def hashkey(type = LibSSH2::HashType::SHA1 : LibSSH2::HashType)
+  def hashkey(type : LibSSH2::HashType::SHA1 | LibSSH2::HashType)
     handle = LibSSH2.hostkey_hash(self, type)
     return "" unless handle
     slice = Slice.new(handle, type == LibSSH2::HashType::SHA1 ? 20 : 16)
@@ -336,7 +336,7 @@ class SSH2::Session
       file_size = stat.st_size
       read_bytes = 0
       File.open(local_path, "w") do |f|
-        buf :: UInt8[1024]
+        buf : UInt8[1024]
         while read_bytes < file_size
           bytes_to_read = min.call(buf.length, file_size - read_bytes)
           len = ch.read(buf.to_slice, bytes_to_read).to_i32
