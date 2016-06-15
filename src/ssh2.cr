@@ -45,7 +45,7 @@ module SSH2
     class InvalidFilename < SFTPError; end
     class LinkLoop < SFTPError; end
 
-    def initialize(@code, @reason)
+    def initialize(@code : UInt64, @reason : String)
       super("SFTP Error: #{@code} / #{@reason}")
     end
 

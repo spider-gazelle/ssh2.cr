@@ -1,8 +1,11 @@
+require "./lib_ssh2"
+require "./session"
+
 class SSH2::KnownHosts
   struct Host
-    getter name
-    getter key
-    getter typemask
+    getter name : String?
+    getter key : String?
+    getter typemask : LibSSH2::TypeMask?
 
     def initialize(@name, @key, @typemask)
     end
@@ -10,7 +13,7 @@ class SSH2::KnownHosts
 
   include Enumerable(Host)
 
-  def initialize(@session)
+  def initialize(@session : Session)
     @handle = LibSSH2.knownhost_init(@session)
     raise SSH2Error.new "invalid handle" unless @handle
   end

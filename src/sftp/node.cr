@@ -1,10 +1,10 @@
 require "./base"
+require "./session"
 
 module SSH2::SFTP
   abstract class Node < Base
-    getter sftp
 
-    def initialize(@sftp, handle)
+    def initialize(@sftp : Session, handle)
       super(@sftp.session, handle)
     end
 

@@ -1,5 +1,9 @@
+require "../session"
+require "../lib_ssh2"
+
 abstract class SSH2::SFTP::Base
-  getter session
+  getter session : SSH2::Session
+  @handle : LibSSH2::SFTP
 
   def initialize(@session, @handle)
     raise SSH2Error.new "invalid handle" unless @handle

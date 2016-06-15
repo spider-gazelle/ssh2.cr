@@ -1,3 +1,5 @@
+require "./session"
+
 class SSH2::Channel
   include IO
 
@@ -5,7 +7,7 @@ class SSH2::Channel
   PROCESS_EXEC = "exec"
   PROCESS_SUBSYSTEM = "subsystem"
 
-  getter session
+  getter session : Session
 
   def initialize(@session, @handle : LibSSH2::Channel, @owned = true)
     raise SSH2Error.new "invalid handle" unless @handle
@@ -220,18 +222,18 @@ class SSH2::Channel
   struct StreamIO
     include IO
 
-    getter channel
-    getter stream_id
+    getter channel : Channel
+    getter stream_id : Int32
 
     def initialize(@channel, @stream_id)
     end
 
     def read(slice : Slice(UInt8))
-      @channel.read(@stream_id, slice, slice.bytesize)
+      @channel.read(@stream_id, slice)
     end
 
     def write(slice : Slice(UInt8))
-      @channel.write(@stream_id, slice, slice.bytesize)
+      @channel.write(@stream_id, slice)
     end
 
     def flush

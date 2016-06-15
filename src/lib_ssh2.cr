@@ -95,10 +95,10 @@ lib LibSSH2
         st_uid : UInt32
         st_gid : UInt32
         st_rdev : Int32
-        st_atimespec : LibC::TimeSpec
-        st_mtimespec : LibC::TimeSpec
-        st_ctimespec : LibC::TimeSpec
-        st_btimespec : LibC::TimeSpec
+        st_atimespec : LibC::Timespec
+        st_mtimespec : LibC::Timespec
+        st_ctimespec : LibC::Timespec
+        st_btimespec : LibC::Timespec
         st_size : Int64
         st_blocks : Int64
         st_blksize : Int32
@@ -222,7 +222,7 @@ lib LibSSH2
 
   alias Channel = Void*
 
-  SSH_EXTENDED_DATA_STDERR            = 1
+  SSH_EXTENDED_DATA_STDERR    = 1
   CHANNEL_FLUSH_EXTENDED_DATA = -1
   CHANNEL_FLUSH_ALL           = -2
 
