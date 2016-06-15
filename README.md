@@ -8,7 +8,7 @@ This library provides binding for libssh2 library.
 
 # Requirements
 
-- Crystal language version 0.9 and higher.
+- Crystal language version 0.17 and higher.
 - libssh2 version 1.5.0 or higher
 
 You can use `homebrew` to install the latest libssh2:
@@ -50,7 +50,7 @@ SSH2::Session.open("localhost", 2222) do |session|
     ch.shell
     session.blocking = false
 
-    buf_space :: UInt8[1024]
+    buf_space = uninitialized UInt8[1024]
     buf = buf_space.to_slice
     loop do
       io = IO.select([STDIN, ch.socket]).first
@@ -61,7 +61,7 @@ SSH2::Session.open("localhost", 2222) do |session|
         end
       elsif io == ch.socket
         len = ch.read(buf).to_i32
-        print! String.new buf[0, len]
+        print String.new buf[0, len]
         break if ch.eof?
       end
     end
@@ -81,7 +81,7 @@ SSH2::Session.open("localhost", 2222) do |session|
       puts fn
     end
     file = sftp.open(".bashrc")
-    puts file.read
+    puts file.gets_to_end
   end
 end
 ```
