@@ -212,7 +212,7 @@ class SSH2::Channel
   end
 
   def to_unsafe
-    @handle
+    @handle as Void*
   end
 
   private def check_error(code)
