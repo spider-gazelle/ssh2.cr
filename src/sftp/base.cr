@@ -18,7 +18,7 @@ abstract class SSH2::SFTP::Base
     if closed?
       raise SFTPClosed.new
     end
-    @handle as Void*
+    @handle
   end
 
   protected def check_error(code)
