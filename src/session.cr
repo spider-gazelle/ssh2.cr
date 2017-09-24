@@ -1,17 +1,22 @@
 require "socket"
 
 class SSH2::Session
-  getter socket : TCPSocket?
+  getter socket
 
-  def initialize
+  def initialize(@socket : TCPSocket)
     @handle = LibSSH2.session_init(nil, nil, nil, nil)
     raise SSH2Error.new "unable to initialize session" unless @handle
+    handshake
+  end
+
+  def self.connect(host, port = 22)
+    socket = TCPSocket.new(host, port)
+    new(socket)
   end
 
   def self.open(host, port = 22)
     TCPSocket.open(host, port) do |socket|
-      session = new
-      session.handshake(socket)
+      session = new(socket)
       begin
         yield session
       ensure
@@ -21,8 +26,8 @@ class SSH2::Session
   end
 
   # Begin transport layer protocol negotiation with the connected host.
-  def handshake(@socket)
-    ret = LibSSH2.session_handshake(@handle, @socket.not_nil!.fd)
+  def handshake
+    ret = LibSSH2.session_handshake(@handle, @socket.fd)
     check_error(ret)
     @connected = true
   end
