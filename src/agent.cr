@@ -9,7 +9,7 @@ class SSH2::Agent
 
   include Enumerable(PublicKey)
 
-  def initialize(@session)
+  def initialize(@session : SSH2::Session)
     @handle = LibSSH2.agent_init(session)
     raise SSH2Error.new "invalid handle" unless @handle
   end
@@ -52,7 +52,7 @@ class SSH2::Agent
   end
 
   private def each_unsafe
-    prev = Pointer(AgentPublicKey).null
+    prev = Pointer(LibSSH2::AgentPublicKey).null
     until LibSSH2.agent_get_identity(self, out store, prev) == 1
       yield store
       prev = store
