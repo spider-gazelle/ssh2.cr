@@ -1,7 +1,7 @@
 require "../session"
 require "../lib_ssh2"
 
-abstract class SSH2::SFTP::Base
+module SSH2::SFTP::Base
   getter session : SSH2::Session
   @handle : LibSSH2::SFTP
 

@@ -1,7 +1,8 @@
 require "./node"
 
 module SSH2::SFTP
-  class Dir < Node
+  class Dir
+    include Node
     # Lists a current directory
     def ls
       loop do

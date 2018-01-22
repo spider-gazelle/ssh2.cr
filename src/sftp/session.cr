@@ -1,7 +1,8 @@
 require "./base"
 
 module SSH2::SFTP
-  class Session < Base
+  class Session
+    include Base
     # Returns the underlying channel
     def channel
       handle = LibSSH2.sftp_get_channel(self)

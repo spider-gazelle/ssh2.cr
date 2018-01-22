@@ -1,8 +1,8 @@
 require "./node"
 
 module SSH2::SFTP
-  class File < Node
-    include IO
+  class File < IO
+    include Node
 
     # This function causes the remote server to synchronize the file data and
     # metadata to disk (like fsync(2)).
