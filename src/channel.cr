@@ -1,7 +1,6 @@
 require "./session"
 
-class SSH2::Channel
-  include IO
+class SSH2::Channel < IO
 
   PROCESS_SHELL = "shell"
   PROCESS_EXEC = "exec"
@@ -219,8 +218,7 @@ class SSH2::Channel
     SessionError.check_error(@session, code)
   end
 
-  struct StreamIO
-    include IO
+  class StreamIO < IO
 
     getter channel : Channel
     getter stream_id : Int32
