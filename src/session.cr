@@ -160,7 +160,7 @@ class SSH2::Session
 
   # If set, libssh2 will not attempt to block SIGPIPEs but will let them trigger from the underlying socket layer.
   def set_enable_sigpipe(value)
-    ret = LibSSH2.session_flag(self, LibSSH2::Flags::SIGPIPE, value ? 1 : 0)
+    ret = LibSSH2.session_flag(self, LibSSH2::SessionFlag::SIGPIPE, value ? 1 : 0)
     check_error(ret)
   end
 
@@ -168,7 +168,7 @@ class SSH2::Session
   # to negotiate compression enabling for this connection. By default libssh2
   # will not attempt to use compression.
   def set_enable_compression(value)
-    ret = LibSSH2.session_flag(self, LibSSH2::Flags::COMPRESS, value ? 1 : 0)
+    ret = LibSSH2.session_flag(self, LibSSH2::SessionFlag::COMPRESS, value ? 1 : 0)
     check_error(ret)
   end
 
