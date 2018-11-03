@@ -52,7 +52,7 @@ class SSH2::SFTP::Attributes
   end
 
   def atime
-    Time.epoch(@stat.atime.to_i32)
+    Time.unix(@stat.atime.to_i32)
   end
 
   def atime=(v : Time)

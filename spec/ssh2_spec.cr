@@ -22,7 +22,7 @@ describe SSH2 do
   end
 
   it "should be able to scp transfer file" do
-    fn = "#{Time.now.epoch}.txt"
+    fn = "#{Time.now.to_unix}.txt"
     connect_ssh do |session|
       session.scp_send(fn, 0o0644, 12) do |ch|
         ch.puts "hello world"
@@ -101,7 +101,7 @@ describe SSH2::SFTP do
   it "should be able to upload a file" do
     connect_ssh do |ssh|
       ssh.sftp_session do |sftp|
-        fn = "#{Time.now.epoch}_upload.txt"
+        fn = "#{Time.now.to_unix}_upload.txt"
         file = sftp.open(fn, "wc", 0o644)
         file.puts "hello world!"
         attrs = file.fstat
