@@ -12,8 +12,7 @@ module SSH2::SFTP
     end
 
     def seek(offset)
-      ret = LibSSH2.sftp_seek(self, offset.to_u64)
-      check_error(ret)
+      LibSSH2.sftp_seek(self, offset.to_u64)
     end
 
     def rewind
