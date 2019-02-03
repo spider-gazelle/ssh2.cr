@@ -15,6 +15,7 @@ class SSH2::Session
 
   def initialize(@socket : TCPSocket)
     @handle = LibSSH2.session_init(nil, nil, nil, nil)
+    @request_lock = Mutex.new
     raise SSH2Error.new "unable to initialize session" unless @handle
     self.blocking = false
     handshake
@@ -43,26 +44,40 @@ class SSH2::Session
   end
 
   def perform_nonblock
-    loop do
-      code = yield
-      if code == LibSSH2::ERROR_EAGAIN
-        waitsocket
-      else
-        check_error(code)
-        return code
+    @request_lock.synchronize do
+      loop do
+        result = yield
+        code = if result.is_a?(Tuple)
+                 result[0]
+               else
+                 result
+               end
+        if code == LibSSH2::ERROR_EAGAIN
+          waitsocket
+        else
+          check_error(code)
+          return result
+        end
       end
     end
   end
 
   def nonblock_handle
-    loop do
-      result = yield
-      code = LibSSH2.session_last_errno(self)
-      if result.null? && code == LibSSH2::ERROR_EAGAIN
-        waitsocket
-      else
-        check_error(code)
-        return result
+    @request_lock.synchronize do
+      loop do
+        result = yield
+        handle = if result.is_a?(Tuple)
+                   result[0]
+                 else
+                   result
+                 end
+        code = LibSSH2.session_last_errno(self)
+        if handle.null? && code == LibSSH2::ERROR_EAGAIN
+          waitsocket
+        else
+          check_error(code)
+          return result
+        end
       end
     end
   end
@@ -76,21 +91,21 @@ class SSH2::Session
   # Login with username and password
   def login(username, password)
     perform_nonblock { LibSSH2.userauth_password(self, username, username.bytesize.to_u32,
-                                      password, password.bytesize.to_u32, nil) }
+      password, password.bytesize.to_u32, nil) }
   end
 
   # Login with username using pub/priv key values
   def login_with_data(username, privkey, pubkey, passphrase = nil)
     perform_nonblock { LibSSH2.userauth_publickey_frommemory(self, username, username.bytesize.to_u32,
-                                                pubkey, LibC::SizeT.new(pubkey.bytesize),
-                                                privkey, LibC::SizeT.new(privkey.bytesize),
-                                                passphrase) }
+      pubkey, LibC::SizeT.new(pubkey.bytesize),
+      privkey, LibC::SizeT.new(privkey.bytesize),
+      passphrase) }
   end
 
   # Login with username using pub/priv key files
   def login_with_pubkey(username, privkey, pubkey = nil, passphrase = nil)
     perform_nonblock { LibSSH2.userauth_publickey_fromfile(self, username, username.bytesize.to_u32,
-                                              pubkey, privkey, passphrase) }
+      pubkey, privkey, passphrase) }
   end
 
   # Login with username using SSH agent
@@ -245,10 +260,11 @@ class SSH2::Session
   # Return value indicates how many seconds you can sleep after this call
   # before you need to call it again.
   def send_keepalive
-    nonblock_handle do
-      LibSSH2.keepalive_send(self, out seconds_to_next)
-      seconds_to_next
+    _, seconds = perform_nonblock do
+      code = LibSSH2.keepalive_send(self, out seconds_to_next)
+      {code, seconds_to_next}
     end
+    seconds
   end
 
   # Set how often keepalive messages should be sent.
@@ -279,8 +295,8 @@ class SSH2::Session
   # Allocate a new channel for exchanging data with the server.
   def open_channel(channel_type, window_size, packet_size, message)
     handle = nonblock_handle { LibSSH2.channel_open(self, channel_type, channel_type.bytesize.to_u32,
-                                  window_size.to_u32, packet_size.to_u32,
-                                  message, message ? message.bytesize.to_u32 : 0_u32) }
+      window_size.to_u32, packet_size.to_u32,
+      message, message ? message.bytesize.to_u32 : 0_u32) }
     Channel.new self, handle
   end
 
@@ -319,7 +335,7 @@ class SSH2::Session
   # Send a file to the remote host via SCP.
   def scp_send(path, mode, size, mtime, atime)
     handle = nonblock_handle { LibSSH2.scp_send(self, path, mode.to_i32, size.to_u64,
-                              LibC::TimeT.new(mtime), LibC::TimeT.new(atime)) }
+      LibC::TimeT.new(mtime), LibC::TimeT.new(atime)) }
     Channel.new self, handle
   end
 
@@ -340,7 +356,7 @@ class SSH2::Session
       raise Errno.new("Unable to get stat for '#{path}'")
     end
     scp_send(path, (stat.st_mode & 0x3ff).to_i32, stat.st_size.to_u64,
-             stat.st_mtimespec.tv_sec, stat.st_atimespec.tv_sec) do |ch|
+      stat.st_mtimespec.tv_sec, stat.st_atimespec.tv_sec) do |ch|
       File.open(path, "r") do |f|
         IO.copy(f, ch)
       end
@@ -366,7 +382,7 @@ class SSH2::Session
 
   # Download a file from the remote host via SCP to the local filesystem.
   def scp_recv_file(path, local_path = path)
-    min = -> (x : Int32|Int64, y : Int32|Int64) { x < y ? x : y}
+    min = ->(x : Int32 | Int64, y : Int32 | Int64) { x < y ? x : y }
 
     # libssh2 scp_recv method has a bug where its channel's read method doesn't
     # return 0 value to indicate the end of file(EOF). The only way to find EOF
