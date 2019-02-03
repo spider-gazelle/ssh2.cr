@@ -59,7 +59,7 @@ describe SSH2::KnownHosts do
       known_hosts.size.should eq(2)
       known_hosts.map(&.name).includes?("localhost").should be_true
       known_hosts.write_file("known_hosts")
-      known_hosts.delete_if {|h| h.name == "localhost"}
+      known_hosts.delete_if { |h| h.name == "localhost" }
       known_hosts.size.should eq(1)
     end
 

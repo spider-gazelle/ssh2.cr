@@ -3,6 +3,7 @@ require "./base"
 module SSH2::SFTP
   class Session
     include Base
+
     # Returns the underlying channel
     def channel
       handle = LibSSH2.sftp_get_channel(self)
@@ -80,7 +81,7 @@ module SSH2::SFTP
     # Create a new symlink
     def symlink(path, target)
       ret = LibSSH2.sftp_symlink(self, path, path.bytesize.to_u32, target, target_len.to_u32,
-                                 LibSSH2::LinkType::SYMLINK)
+        LibSSH2::LinkType::SYMLINK)
       check_error(ret)
     end
 

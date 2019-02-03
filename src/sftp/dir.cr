@@ -3,6 +3,7 @@ require "./node"
 module SSH2::SFTP
   class Dir
     include Node
+
     # Lists a current directory
     def ls
       loop do
@@ -18,7 +19,7 @@ module SSH2::SFTP
     # Lists a current directory
     def ls
       ret = [] of String
-      ls {|fn| ret << fn}
+      ls { |fn| ret << fn }
       ret
     end
 
@@ -31,7 +32,7 @@ module SSH2::SFTP
         lbuf.to_unsafe.map!(lbuf.size) { 0_u8 }
 
         ret = LibSSH2.sftp_readdir(self, buf, LibC::SizeT.new(buf.size),
-                                   lbuf, LibC::SizeT.new(lbuf.size), out attrs)
+          lbuf, LibC::SizeT.new(lbuf.size), out attrs)
         break if ret == 0
         check_error(ret) if ret < 0
         if lbuf[0] == 0_u8
@@ -44,7 +45,7 @@ module SSH2::SFTP
 
     def ll
       ret = [] of String
-      ll {|fn| ret << fn}
+      ll { |fn| ret << fn }
       ret
     end
   end

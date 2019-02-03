@@ -24,25 +24,45 @@ module SSH2
 
   class SFTPError < SSH2Error
     class EOF < SFTPError; end
+
     class NoSuchFile < SFTPError; end
+
     class PermissionDenied < SFTPError; end
+
     class Failure < SFTPError; end
+
     class BadMessage < SFTPError; end
+
     class NoConnection < SFTPError; end
+
     class ConnectionLost < SFTPError; end
+
     class Unsupported < SFTPError; end
+
     class InvalidHandle < SFTPError; end
+
     class NoSuchFile < SFTPError; end
+
     class FileAlreadyExists < SFTPError; end
+
     class WriteProtect < SFTPError; end
+
     class NoMedia < SFTPError; end
+
     class NoSpaceOnFs < SFTPError; end
+
     class QuotaExceeded < SFTPError; end
+
     class UnknownPrincipal < SFTPError; end
+
     class LockConflict < SFTPError; end
+
     class DirNotEmpty < SFTPError; end
+
     class NotADirectory < SFTPError; end
+
     class InvalidFilename < SFTPError; end
+
     class LinkLoop < SFTPError; end
 
     def initialize(@code : UInt64, @reason : String)

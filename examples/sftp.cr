@@ -10,4 +10,3 @@ SSH2::Session.open("localhost", 2222) do |session|
     puts file.read
   end
 end
-

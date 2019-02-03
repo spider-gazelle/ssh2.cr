@@ -7,7 +7,7 @@ SSH2::Session.open("my_server") do |session|
     ch.shell
     session.blocking = false
 
-    buf_space :: UInt8[1024]
+    buf_space = Bytes.new(1024)
     buf = buf_space.to_slice
     loop do
       io = IO.select([STDIN, ch.socket]).first

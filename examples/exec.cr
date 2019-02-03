@@ -7,4 +7,3 @@ SSH2::Session.open("my_server") do |session|
     IO.copy(channel, STDOUT)
   end
 end
-

@@ -20,7 +20,7 @@ class SSH2::KnownHosts
 
   def add(host, salt, key, comment, typemask : LibSSH2::TypeMask)
     ret = LibSSH2.knownhost_add(self, host, salt, key, key.size.to_u64,
-                                comment, comment.bytesize.to_u64, typemask, out store)
+      comment, comment.bytesize.to_u64, typemask, out store)
     check_error(ret)
     store
   end

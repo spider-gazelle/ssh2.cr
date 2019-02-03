@@ -30,4 +30,3 @@ class SSH2::Listener
     @handle
   end
 end
-
