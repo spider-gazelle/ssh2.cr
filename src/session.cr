@@ -1,11 +1,22 @@
 require "socket"
 
+class Socket
+  def _wait_read
+    wait_readable
+  end
+
+  def _wait_write
+    wait_writable
+  end
+end
+
 class SSH2::Session
   getter socket
 
   def initialize(@socket : TCPSocket)
     @handle = LibSSH2.session_init(nil, nil, nil, nil)
     raise SSH2Error.new "unable to initialize session" unless @handle
+    self.blocking = false
     handshake
   end
 
@@ -25,34 +36,61 @@ class SSH2::Session
     end
   end
 
+  private def waitsocket
+    flags = block_directions
+    @socket._wait_read if flags.inbound?
+    @socket._wait_write if flags.outbound?
+  end
+
+  def perform_nonblock
+    loop do
+      code = yield
+      if code == LibSSH2::ERROR_EAGAIN
+        waitsocket
+      else
+        check_error(code)
+        return code
+      end
+    end
+  end
+
+  def nonblock_handle
+    loop do
+      result = yield
+      code = LibSSH2.session_last_errno(self)
+      if result.null? && code == LibSSH2::ERROR_EAGAIN
+        waitsocket
+      else
+        check_error(code)
+        return result
+      end
+    end
+  end
+
   # Begin transport layer protocol negotiation with the connected host.
   def handshake
-    ret = LibSSH2.session_handshake(@handle, @socket.fd)
-    check_error(ret)
+    perform_nonblock { LibSSH2.session_handshake(@handle, @socket.fd) }
     @connected = true
   end
 
   # Login with username and password
   def login(username, password)
-    ret = LibSSH2.userauth_password(self, username, username.bytesize.to_u32,
-                                    password, password.bytesize.to_u32, nil)
-    check_error(ret)
+    perform_nonblock { LibSSH2.userauth_password(self, username, username.bytesize.to_u32,
+                                      password, password.bytesize.to_u32, nil) }
   end
 
   # Login with username using pub/priv key values
   def login_with_data(username, privkey, pubkey, passphrase = nil)
-    ret = LibSSH2.userauth_publickey_frommemory(self, username, username.bytesize.to_u32,
+    perform_nonblock { LibSSH2.userauth_publickey_frommemory(self, username, username.bytesize.to_u32,
                                                 pubkey, LibC::SizeT.new(pubkey.bytesize),
                                                 privkey, LibC::SizeT.new(privkey.bytesize),
-                                                passphrase)
-    check_error(ret)
+                                                passphrase) }
   end
 
   # Login with username using pub/priv key files
   def login_with_pubkey(username, privkey, pubkey = nil, passphrase = nil)
-    ret = LibSSH2.userauth_publickey_fromfile(self, username, username.bytesize.to_u32,
-                                              pubkey, privkey, passphrase)
-    check_error(ret)
+    perform_nonblock { LibSSH2.userauth_publickey_fromfile(self, username, username.bytesize.to_u32,
+                                              pubkey, privkey, passphrase) }
   end
 
   # Login with username using SSH agent
@@ -82,7 +120,7 @@ class SSH2::Session
 
   # Indicates whether or not the named session has been successfully authenticated.
   def authenticated?
-    ret = LibSSH2.userauth_authenticated(self) == 1
+    LibSSH2.userauth_authenticated(self) == 1
   end
 
   # Returns the current session's host key
@@ -102,9 +140,9 @@ class SSH2::Session
   # with a description.
   def disconnect(reason = LibSSH2::DisconnectReason::BY_APPLICATION, description = "bye")
     return unless @connected
-    ret = LibSSH2.session_disconnect(self, reason, description, "")
+    perform_nonblock { LibSSH2.session_disconnect(self, reason, description, "") }
+  ensure
     @connected = false
-    check_error(ret)
   end
 
   # Once the session has been setup and `handshake` has completed successfully,
@@ -140,7 +178,7 @@ class SSH2::Session
   # performed on a session with no room for more data, a blocking session will
   # wait for room. A non-blocking session will return immediately without
   # writing anything.
-  def blocking=(value)
+  private def blocking=(value)
     LibSSH2.session_set_blocking(self, value ? 1 : 0)
   end
 
@@ -168,8 +206,7 @@ class SSH2::Session
   # to negotiate compression enabling for this connection. By default libssh2
   # will not attempt to use compression.
   def set_enable_compression(value)
-    ret = LibSSH2.session_flag(self, LibSSH2::SessionFlag::COMPRESS, value ? 1 : 0)
-    check_error(ret)
+    perform_nonblock { LibSSH2.session_flag(self, LibSSH2::SessionFlag::COMPRESS, value ? 1 : 0) }
   end
 
   # Returns a tuple consisting of the computed digest of the remote system's
@@ -184,8 +221,7 @@ class SSH2::Session
   # to calling `handshake`, as they are used during the protocol initiation
   # phase.
   def set_method_pref(method_type : LibSSH2::MethodType, value)
-    ret = LibSSH2.session_method_pref(self, method_type, value)
-    check_error(ret)
+    perform_nonblock { LibSSH2.session_method_pref(self, method_type, value) }
   end
 
   # Returns the actual method negotiated for a particular transport parameter.
@@ -209,9 +245,10 @@ class SSH2::Session
   # Return value indicates how many seconds you can sleep after this call
   # before you need to call it again.
   def send_keepalive
-    ret = LibSSH2.keepalive_send(self, out seconds_to_next)
-    check_error(ret)
-    seconds_to_next
+    nonblock_handle do
+      LibSSH2.keepalive_send(self, out seconds_to_next)
+      seconds_to_next
+    end
   end
 
   # Set how often keepalive messages should be sent.
@@ -235,15 +272,15 @@ class SSH2::Session
   # connections. New connections will be queued by the library until accepted
   # by `Listener.accept`.
   def forward_listen(host, port, queue_maxsize = 16)
-    handle = LibSSH2.channel_forward_listen(self, host, port, out bound_port, queue_maxsize)
+    handle = nonblock_handle { LibSSH2.channel_forward_listen(self, host, port, out bound_port, queue_maxsize) }
     Listener.new(self, handle, bound_port)
   end
 
   # Allocate a new channel for exchanging data with the server.
   def open_channel(channel_type, window_size, packet_size, message)
-    handle = LibSSH2.channel_open(self, channel_type, channel_type.bytesize.to_u32,
+    handle = nonblock_handle { LibSSH2.channel_open(self, channel_type, channel_type.bytesize.to_u32,
                                   window_size.to_u32, packet_size.to_u32,
-                                  message, message ? message.bytesize.to_u32 : 0_u32)
+                                  message, message ? message.bytesize.to_u32 : 0_u32) }
     Channel.new self, handle
   end
 
@@ -266,7 +303,7 @@ class SSH2::Session
   # encrypted, communication from the server to the 3rd party host travels in
   # cleartext.
   def direct_tcpip(host, port, source_host, source_port)
-    handle = LibSSH2.channel_direct_tcpip(self, host, port, source_host, source_port)
+    handle = nonblock_handle { LibSSH2.channel_direct_tcpip(self, host, port, source_host, source_port) }
     Channel.new self, handle
   end
 
@@ -281,9 +318,8 @@ class SSH2::Session
 
   # Send a file to the remote host via SCP.
   def scp_send(path, mode, size, mtime, atime)
-    handle = LibSSH2.scp_send(self, path, mode.to_i32, size.to_u64,
-                              LibC::TimeT.new(mtime), LibC::TimeT.new(atime))
-    check_error(LibSSH2.session_last_errno(self))
+    handle = nonblock_handle { LibSSH2.scp_send(self, path, mode.to_i32, size.to_u64,
+                              LibC::TimeT.new(mtime), LibC::TimeT.new(atime)) }
     Channel.new self, handle
   end
 
@@ -313,8 +349,7 @@ class SSH2::Session
 
   # Request a file from the remote host via SCP.
   def scp_recv(path)
-    handle = LibSSH2.scp_recv(self, path, out stat)
-    check_error(LibSSH2.session_last_errno(self))
+    handle = nonblock_handle { LibSSH2.scp_recv(self, path, out stat) }
     {Channel.new(self, handle), stat}
   end
 
@@ -360,10 +395,7 @@ class SSH2::Session
   # Open a channel and initialize the SFTP subsystem.
   # Returns a new SFTP instance
   def sftp_session
-    handle = LibSSH2.sftp_init(self)
-    unless handle
-      check_error(LibSSH2.session_last_errno(self))
-    end
+    handle = nonblock_handle { LibSSH2.sftp_init(self) }
     SFTP::Session.new(self, handle)
   end
 

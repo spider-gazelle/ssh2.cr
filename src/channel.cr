@@ -37,8 +37,7 @@ class SSH2::Channel < IO
   end
 
   def wait_closed
-    ret = LibSSH2.channel_wait_closed(self)
-    check_error(ret)
+    @session.perform_nonblock { LibSSH2.channel_wait_closed(self) }
   end
 
   # Check if the remote host has sent an EOF status for the selected stream.
@@ -62,9 +61,8 @@ class SSH2::Channel < IO
   end
 
   def process_startup(request, message)
-    ret = LibSSH2.channel_process_startup(self, request, request.bytesize.to_u32,
-                                          message, message ? message.bytesize.to_u32 : 0_u32)
-    check_error(ret)
+    @session.perform_nonblock { LibSSH2.channel_process_startup(self, request, request.bytesize.to_u32,
+                                          message, message ? message.bytesize.to_u32 : 0_u32) }
   end
 
   # Return a tuple with first field populated with the exit signal (without
@@ -91,18 +89,15 @@ class SSH2::Channel < IO
   # substreams on a first-in/first-out basis.
   # LibSSH2::ExtendedData::IGNORE - Discard all extended data as it arrives.
   def handle_extended_data(ignore_mode : LibSSH2::ExtendedData)
-    ret = LibSSH2.channel_handle_extended_data(self, ignore_mode)
-    check_error(ret)
+    @session.perform_nonblock { LibSSH2.channel_handle_extended_data(self, ignore_mode) }
   end
 
   def read(stream_id, slice : Slice(UInt8))
-    ret = LibSSH2.channel_read(self, stream_id, slice, LibC::SizeT.new(slice.bytesize))
-    check_error(ret)
+    @session.perform_nonblock { LibSSH2.channel_read(self, stream_id, slice, LibC::SizeT.new(slice.bytesize)) }
   end
 
   def write(stream_id, slice : Slice(UInt8))
-    ret = LibSSH2.channel_write(self, stream_id, slice, LibC::SizeT.new(slice.bytesize))
-    check_error(ret)
+    @session.perform_nonblock { LibSSH2.channel_write(self, stream_id, slice, LibC::SizeT.new(slice.bytesize)) }
   end
 
   def read(slice : Slice(UInt8))
@@ -124,8 +119,7 @@ class SSH2::Channel < IO
 
   # Flush channel
   def flush(stream_id = 0)
-    ret = LibSSH2.channel_flush(self, stream_id)
-    check_error(ret)
+    @session.perform_nonblock { LibSSH2.channel_flush(self, stream_id) }
   end
 
   # Flush stderr
@@ -166,10 +160,9 @@ class SSH2::Channel < IO
   # success.
   def request_pty(term, modes = nil, width = LibSSH2::TERM_WIDTH, height = LibSSH2::TERM_HEIGHT,
                   width_px = LibSSH2::TERM_WIDTH_PX, height_px = LibSSH2::TERM_HEIGHT_PX)
-    ret = LibSSH2.channel_request_pty(self, term, term.bytesize.to_u32,
+    @session.perform_nonblock { LibSSH2.channel_request_pty(self, term, term.bytesize.to_u32,
                                       modes, modes ? modes.bytesize.to_u32 : 0_u32,
-                                      width, height, width_px, height_px)
-    check_error(ret)
+                                      width, height, width_px, height_px) }
   end
 
   # Tell the remote host that no further data will be sent on the specified
@@ -183,16 +176,14 @@ class SSH2::Channel < IO
 
   # Wait for the remote end to acknowledge an EOF request.
   def wait_eof
-    ret = LibSSH2.channel_wait_eof(self)
-    check_error(ret)
+    @session.perform_nonblock { LibSSH2.channel_wait_eof(self) }
   end
 
   # Set an environment variable in the remote channel's process space. Note
   # that this does not make sense for all channel types and may be ignored by
   # the server despite returning success.
   def setenv(varname, value)
-    ret = LibSSH2.channel_setenv(self, varname, varname.bytesize.to_u32, value, value.bytesize.to_u32)
-    check_error(ret)
+    @session.perform_nonblock { LibSSH2.channel_setenv(self, varname, varname.bytesize.to_u32, value, value.bytesize.to_u32) }
   end
 
   # The number of bytes which the remote end may send without overflowing the window limit
