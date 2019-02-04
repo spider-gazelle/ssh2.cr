@@ -4,7 +4,13 @@ sudo: required
 install:
   - docker pull tutum/ubuntu:trusty
   - docker run -d -p 2222:22 -e AUTHORIZED_KEYS="`cat ./spec/keys/id_rsa.pub`" tutum/ubuntu:trusty
-  - sudo apt-get install libssh2-1-dev
+  - wget https://libssh2.org/download/libssh2-1.8.0.tar.gz
+  - tar vxzf libssh2-1.8.0.tar.gz
+  - cd libssh2-1.8.0/
+  - ./configure
+  - make
+  - make install
+  - cd ../
   - shards install
   - sleep 10
 
