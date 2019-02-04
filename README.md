@@ -26,7 +26,7 @@ shell commands via ssh as well as scp and sftp services.
 An example of running a shell command via SSH on the remote server:
 
 ```crystal
-require "./src/ssh2"
+require "ssh2"
 
 SSH2::Session.open("my_server") do |session|
   session.login("username", "password")
@@ -40,7 +40,7 @@ end
 An example of running shell:
 
 ```crystal
-require "./src/ssh2"
+require "ssh2"
 
 SSH2::Session.open("localhost", 2222) do |session|
   session.login_with_pubkey("root", "./spec/keys/id_rsa")
@@ -71,7 +71,7 @@ end
 An example of using SFTP API:
 
 ```crystal
-require "./src/ssh2"
+require "ssh2"
 
 SSH2::Session.open("localhost", 2222) do |session|
   session.login_with_pubkey("root", "./spec/keys/id_rsa")
