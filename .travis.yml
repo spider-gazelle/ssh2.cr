@@ -10,6 +10,10 @@ install:
   - sudo dpkg -i libgcrypt20_1.8.3-1ubuntu1_amd64.deb
   - wget https://launchpad.net/ubuntu/+source/libssh2/1.8.0-2/+build/15151524/+files/libssh2-1_1.8.0-2_amd64.deb
   - sudo dpkg -i libssh2-1_1.8.0-2_amd64.deb
+  - wget https://launchpad.net/ubuntu/+source/libgcrypt20/1.8.3-1ubuntu1/+build/15106861/+files/libgcrypt20-dev_1.8.3-1ubuntu1_amd64.deb
+  - sudo dpkg -i libgcrypt20-dev_1.8.3-1ubuntu1_amd64.deb
+  - wget https://launchpad.net/ubuntu/+source/libssh2/1.8.0-2/+build/15151524/+files/libssh2-1-dev_1.8.0-2_amd64.deb
+  - sudo dpkg -i libssh2-1-dev_1.8.0-2_amd64.deb
   - shards install
   - sleep 5
 
