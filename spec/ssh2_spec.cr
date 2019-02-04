@@ -3,7 +3,11 @@ require "spec"
 
 def connect_ssh
   SSH2::Session.open("localhost", 2222) do |session|
-    session.login_with_pubkey("root", "./spec/keys/id_rsa")
+    if ENV["TRAVIS"]?
+      session.login("sshuser", "somepassword")
+    else
+      session.login_with_pubkey("root", "./spec/keys/id_rsa")
+    end
     session.authenticated?.should be_true
     yield session
   end
