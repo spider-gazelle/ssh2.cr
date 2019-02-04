@@ -1,16 +1,10 @@
+dist: xenial
 sudo: required
-services:
-  - docker
-
-before_install:
-  - sudo apt-add-repository multiverse
-  - sudo apt-get update
-  - sudo apt-get install -o Dpkg::Options::="--force-confold" --force-yes -y docker-ce
 
 install:
   - docker pull tutum/ubuntu:trusty
   - docker run -d -p 2222:22 -e AUTHORIZED_KEYS="`cat ./spec/keys/id_rsa.pub`" tutum/ubuntu:trusty
-  - sudo apt-get install libgcrypt20-dev libgpg-error-dev libssh2-1 libssh2-1-dev
+  - sudo apt-get install libssh2-1-dev
   - shards install
   - sleep 10
 
