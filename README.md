@@ -4,11 +4,11 @@ This library provides binding for libssh2 library.
 
 # Status
 
-*Alpha*
+Good to go!
 
 # Requirements
 
-- Crystal language version 0.17 and higher.
+- Crystal language version 0.7.0 and higher.
 - libssh2 version 1.5.0 or higher
 
 You can use `homebrew` to install the latest libssh2:
@@ -98,6 +98,3 @@ $ docker run -d -p 2222:22 -e AUTHORIZED_KEYS="`cat ./spec/keys/id_rsa.pub`" tut
 # License
 
 MIT clause - see LICENSE for more details.
-
-
-

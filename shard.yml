@@ -1,7 +1,8 @@
 name: ssh2
-version: 0.1.15
+version: 1.0.0
 
 authors:
   - datanoise (https://github.com/datanoise)
+  - stakach (https://github.com/stakach)
 
 license: MIT

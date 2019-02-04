@@ -1,0 +1,19 @@
+sudo: required
+services:
+  - docker
+
+before_install:
+  - sudo apt-add-repository multiverse
+  - sudo apt-get update
+  - sudo apt-get install -o Dpkg::Options::="--force-confold" --force-yes -y docker-ce
+
+install:
+  - docker pull tutum/ubuntu:trusty
+  - docker run -d -p 2222:22 -e AUTHORIZED_KEYS="`cat ./spec/keys/id_rsa.pub`" tutum/ubuntu:trusty
+  - shards install
+  - sleep 10
+
+script:
+  - crystal spec
+
+language: crystal
