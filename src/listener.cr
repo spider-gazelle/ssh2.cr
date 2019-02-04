@@ -12,13 +12,13 @@ class SSH2::Listener
   end
 
   def accept
-    Channel.new session, LibSSH2.channel_forward_accept(self)
+    handle = session.nonblock_handle { LibSSH2.channel_forward_accept(self) }
+    Channel.new(session, handle)
   end
 
   def cancel
     return if canceled?
-    ret = LibSSH2.channel_forward_cancel(self)
-    SessionError.check_error(@session, ret)
+    session.perform_nonblock { LibSSH2.channel_forward_cancel(self) }
     @canceled = true
   end
 

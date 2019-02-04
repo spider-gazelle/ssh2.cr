@@ -7,8 +7,7 @@ module SSH2::SFTP
     # This function causes the remote server to synchronize the file data and
     # metadata to disk (like fsync(2)).
     def fsync
-      ret = LibSSH2.sftp_fsync(self)
-      check_error(ret)
+      @session.perform_nonblock { LibSSH2.sftp_fsync(self) }
     end
 
     def seek(offset)
@@ -24,15 +23,11 @@ module SSH2::SFTP
     end
 
     def read(slice : Slice(UInt8))
-      ret = LibSSH2.sftp_read(self, slice, LibC::SizeT.new(slice.bytesize))
-      check_error(ret)
-      ret
+      @session.perform_nonblock { LibSSH2.sftp_read(self, slice, LibC::SizeT.new(slice.bytesize)) }
     end
 
     def write(slice : Slice(UInt8))
-      ret = LibSSH2.sftp_write(self, slice, LibC::SizeT.new(slice.bytesize))
-      check_error(ret)
-      ret
+      @session.perform_nonblock { LibSSH2.sftp_write(self, slice, LibC::SizeT.new(slice.bytesize)) }
     end
   end
 end
