@@ -358,8 +358,11 @@ class SSH2::Session
 
   # Request a file from the remote host via SCP.
   def scp_recv(path)
-    handle = nonblock_handle { LibSSH2.scp_recv(self, path, out stat) }
-    {Channel.new(self, handle), stat}
+    handle, stats = nonblock_handle do
+      ret = LibSSH2.scp_recv(self, path, out stat)
+      {ret, stat}
+    end
+    {Channel.new(self, handle), stats}
   end
 
   # Request a file from the remote host via SCP.
