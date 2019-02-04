@@ -11,6 +11,7 @@ install:
   - make
   - sudo make install
   - cd ../
+  - sudo cp /usr/local/lib/libssh2.so.1.0.1 /usr/local/lib/libssh2.so.1
   - shards install
   - sleep 10
 
