@@ -13,7 +13,7 @@ module SSH2
 
     def self.check_error(session, code)
       if code >= LibSSH2::ERROR_NONE || code == LibSSH2::ERROR_EAGAIN
-        return code
+        code
       else
         raise SessionError.new(session)
       end

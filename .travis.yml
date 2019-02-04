@@ -10,5 +10,6 @@ install:
 
 script:
   - crystal spec
+  - bin/ameba
 
 language: crystal

@@ -70,7 +70,7 @@ describe SSH2::KnownHosts do
     connect_ssh do |session|
       known_hosts = session.knownhosts
       known_hosts.read_file("known_hosts")
-      key, key_type = session.hostkey
+      key, _ = session.hostkey
       host = known_hosts.check("localhost", 2222, key, LibSSH2::TypeMask::PLAIN | LibSSH2::TypeMask::KEYENC_RAW)
       host.should eq(LibSSH2::KnownHostCheck::MATCH)
     end
