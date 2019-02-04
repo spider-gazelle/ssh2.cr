@@ -126,10 +126,14 @@ class SSH2::Session
   # authentication schemes it does support. In the unlikely event that none
   # authentication succeeds, this method with return `nil`. This case may be
   # distinguished from a failing case by examining `authenticated?`.
+  #
+  # Returns false value if authentication was successfull, a string or true otherwise
   def login_with_noauth(username)
-    handle = LibSSH2.userauth_list(self, username, username.bytesize.to_u32)
+    handle = nonblock_handle { LibSSH2.userauth_list(self, username, username.bytesize.to_u32) }
     if handle
       String.new handle
+    else
+      !authenticated?
     end
   end
 
@@ -171,8 +175,7 @@ class SSH2::Session
   # started with `handshake`. This is optional; a banner corresponding to the
   # protocol and libssh2 version will be sent by default.
   def banner=(value)
-    ret = LibSSH2.session_banner_set(self, value)
-    check_error(ret)
+    perform_nonblock { LibSSH2.session_banner_set(self, value) }
   end
 
   # Returns block direction flags
@@ -213,8 +216,7 @@ class SSH2::Session
 
   # If set, libssh2 will not attempt to block SIGPIPEs but will let them trigger from the underlying socket layer.
   def set_enable_sigpipe(value)
-    ret = LibSSH2.session_flag(self, LibSSH2::SessionFlag::SIGPIPE, value ? 1 : 0)
-    check_error(ret)
+    perform_nonblock { LibSSH2.session_flag(self, LibSSH2::SessionFlag::SIGPIPE, value ? 1 : 0) }
   end
 
   # If set - before the connection negotiation is performed - libssh2 will try
@@ -267,18 +269,6 @@ class SSH2::Session
     seconds
   end
 
-  # Set how often keepalive messages should be sent.
-  #
-  # @param want_reply: indicates whether the keepalive messages should request
-  # a response from the server.
-  #
-  # @param interval:  is number of seconds that can pass without any I/O, use 0
-  # (the default) to disable keepalives. To avoid some busy-loop corner-cases,
-  # if you specify an interval of 1 it will be treated as 2.
-  def keepalive_config(want_reply, interval)
-    LibSSH2.keepalive_config(self, want_reply.to_i32, interval.to_u32)
-  end
-
   # Return `KnownHosts` object that allows managing known hosts
   def knownhosts
     KnownHosts.new(self)
@@ -288,8 +278,11 @@ class SSH2::Session
   # connections. New connections will be queued by the library until accepted
   # by `Listener.accept`.
   def forward_listen(host, port, queue_maxsize = 16)
-    handle = nonblock_handle { LibSSH2.channel_forward_listen(self, host, port, out bound_port, queue_maxsize) }
-    Listener.new(self, handle, bound_port)
+    handle, bport = nonblock_handle do
+      ret = LibSSH2.channel_forward_listen(self, host, port, out bound_port, queue_maxsize)
+      {ret, bound_port}
+    end
+    Listener.new(self, handle, bport)
   end
 
   # Allocate a new channel for exchanging data with the server.

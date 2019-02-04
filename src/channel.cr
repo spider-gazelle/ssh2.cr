@@ -24,11 +24,9 @@ class SSH2::Channel < IO
   # `wait_closed` or pass `wait` parameter as true.
   def close(wait = false)
     return if @closed
-    ret = LibSSH2.channel_close(self)
-    check_error(ret).tap do
-      @closed = true
-      wait_closed if wait
-    end
+    @session.perform_nonblock { LibSSH2.channel_close(self) }
+    @closed = true
+    wait_closed if wait
   end
 
   def closed?
@@ -149,9 +147,11 @@ class SSH2::Channel < IO
   # adjustment amount will be queued for a later packet.
   # Returns a new size of the receive window (as understood by remote end).
   def receive_window_adjust(adjustment, force = false)
-    ret = LibSSH2.channel_receive_window_adjust(self, adjustment, force ? 1_u8 : 0_u8, out window)
-    check_error(ret)
-    window
+    _, win = @session.perform_nonblock do
+      ret = LibSSH2.channel_receive_window_adjust(self, adjustment, force ? 1_u8 : 0_u8, out window)
+      {ret, window}
+    end
+    win
   end
 
   # Request a PTY on an established channel. Note that this does not make sense
@@ -167,10 +167,8 @@ class SSH2::Channel < IO
   # Tell the remote host that no further data will be sent on the specified
   # channel. Processes typically interpret this as a closed stdin descriptor.
   def send_eof(wait = false)
-    ret = LibSSH2.channel_send_eof(self)
-    check_error(ret).tap do
-      wait_eof if wait
-    end
+    @session.perform_nonblock { LibSSH2.channel_send_eof(self) }
+    wait_eof if wait
   end
 
   # Wait for the remote end to acknowledge an EOF request.
@@ -197,7 +195,7 @@ class SSH2::Channel < IO
   end
 
   def finalize
-    LibSSH2.channel_free(@handle) if @owned
+    @session.perform_nonblock { LibSSH2.channel_free(@handle) } if @owned
   end
 
   def to_unsafe
