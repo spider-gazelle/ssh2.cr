@@ -97,3 +97,4 @@ $ docker run -d -p 2222:22 -e AUTHORIZED_KEYS="`cat ./spec/keys/id_rsa.pub`" tut
 # License
 
 MIT clause - see LICENSE for more details.
+Many thanks to the original author [Kent Sibilev](https://github.com/datanoise/ssh2.cr)
