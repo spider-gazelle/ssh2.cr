@@ -44,10 +44,11 @@ require "ssh2"
 
 session = SSH2::Session.open("localhost", 2222)
 session.login("root", "somepassword")
-ch = session.open_session
+channel = session.open_session
+
 # request the terminal has echo mode off
 channel.request_pty("vt100", [{SSH2::TerminalMode::ECHO, 0u32}])
-ch.shell
+channel.shell
 
 # Send commands
 spawn {
