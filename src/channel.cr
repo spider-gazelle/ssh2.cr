@@ -157,11 +157,22 @@ class SSH2::Channel < IO
   # Request a PTY on an established channel. Note that this does not make sense
   # for all channel types and may be ignored by the server despite returning
   # success.
-  def request_pty(term, modes = nil, width = LibSSH2::TERM_WIDTH, height = LibSSH2::TERM_HEIGHT,
+  def request_pty(term, modes : Array(Tuple(TerminalMode, UInt32))? = nil, width = LibSSH2::TERM_WIDTH, height = LibSSH2::TERM_HEIGHT,
                   width_px = LibSSH2::TERM_WIDTH_PX, height_px = LibSSH2::TERM_HEIGHT_PX)
+    tmodes = if modes && !modes.empty?
+               io = IO::Memory.new
+               modes.each do |tuple|
+                 io.write_byte(tuple[0].to_u8)
+                 io.write_bytes(tuple[1])
+               end
+               io.write_byte(0u8)
+               io.to_slice
+             else
+               Bytes.new(0)
+             end
+
     @session.perform_nonblock { LibSSH2.channel_request_pty(self, term, term.bytesize.to_u32,
-      modes, modes ? modes.bytesize.to_u32 : 0_u32,
-      width, height, width_px, height_px) }
+      tmodes, tmodes.bytesize.to_u32, width, height, width_px, height_px) }
   end
 
   # Tell the remote host that no further data will be sent on the specified

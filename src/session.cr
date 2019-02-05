@@ -44,40 +44,36 @@ class SSH2::Session
   end
 
   def perform_nonblock
-    @request_lock.synchronize do
-      loop do
-        result = yield
-        code = if result.is_a?(Tuple)
-                 result[0]
-               else
-                 result
-               end
-        if code == LibSSH2::ERROR_EAGAIN
-          waitsocket
-        else
-          check_error(code)
-          return result
-        end
+    loop do
+      result = @request_lock.synchronize { yield }
+      code = if result.is_a?(Tuple)
+               result[0]
+             else
+               result
+             end
+      if code == LibSSH2::ERROR_EAGAIN
+        waitsocket
+      else
+        check_error(code)
+        return result
       end
     end
   end
 
   def nonblock_handle
-    @request_lock.synchronize do
-      loop do
-        result = yield
-        handle = if result.is_a?(Tuple)
-                   result[0]
-                 else
-                   result
-                 end
-        code = LibSSH2.session_last_errno(self)
-        if handle.null? && code == LibSSH2::ERROR_EAGAIN
-          waitsocket
-        else
-          check_error(code)
-          return result
-        end
+    loop do
+      result = @request_lock.synchronize { yield }
+      handle = if result.is_a?(Tuple)
+                 result[0]
+               else
+                 result
+               end
+      code = LibSSH2.session_last_errno(self)
+      if handle.null? && code == LibSSH2::ERROR_EAGAIN
+        waitsocket
+      else
+        check_error(code)
+        return result
       end
     end
   end

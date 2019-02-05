@@ -42,29 +42,27 @@ An example of running shell:
 ```crystal
 require "ssh2"
 
-SSH2::Session.open("localhost", 2222) do |session|
-  session.login_with_pubkey("root", "./spec/keys/id_rsa")
-  session.open_session do |ch|
-    ch.request_pty("vt100")
-    ch.shell
-    session.blocking = false
+session = SSH2::Session.open("localhost", 2222)
+session.login("root", "somepassword")
+ch = session.open_session
+# request the terminal has echo mode off
+channel.request_pty("vt100", [{SSH2::TerminalMode::ECHO, 0u32}])
+ch.shell
 
-    buf_space = uninitialized UInt8[1024]
-    buf = buf_space.to_slice
-    loop do
-      io = IO.select([STDIN, ch.socket]).first
-      if io == STDIN
-        command = gets
-        if command
-          ch.write(command.to_slice)
-        end
-      elsif io == ch.socket
-        len = ch.read(buf).to_i32
-        print String.new buf[0, len]
-        break if ch.eof?
-      end
-    end
+# Send commands
+spawn {
+  list = ["ls\n", "ps aux\n", "uptime\n"]
+  loop do
+    channel.write(list.sample(1)[0].to_slice)
+    sleep 3
   end
+}
+
+# Receive responses
+raw_data = Bytes.new(2048)
+loop do
+  bytes_read = channel.read(raw_data)
+  puts String.new(raw_data[0, bytes_read])
 end
 ```
 
