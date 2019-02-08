@@ -80,6 +80,8 @@ class SSH2::Session
 
   # Begin transport layer protocol negotiation with the connected host.
   def handshake
+    @socket._wait_read
+    @socket._wait_write
     perform_nonblock { LibSSH2.session_handshake(@handle, @socket.fd) }
     @connected = true
   end
