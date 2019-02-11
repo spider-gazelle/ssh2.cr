@@ -88,12 +88,14 @@ class SSH2::Session
 
   # Login with username and password
   def login(username, password)
+    @socket._wait_write
     perform_nonblock { LibSSH2.userauth_password(self, username, username.bytesize.to_u32,
       password, password.bytesize.to_u32, nil) }
   end
 
   # Login with username using pub/priv key values
   def login_with_data(username, privkey, pubkey, passphrase = nil)
+    @socket._wait_write
     perform_nonblock { LibSSH2.userauth_publickey_frommemory(self, username, username.bytesize.to_u32,
       pubkey, LibC::SizeT.new(pubkey.bytesize),
       privkey, LibC::SizeT.new(privkey.bytesize),
@@ -102,6 +104,7 @@ class SSH2::Session
 
   # Login with username using pub/priv key files
   def login_with_pubkey(username, privkey, pubkey = nil, passphrase = nil)
+    @socket._wait_write
     perform_nonblock { LibSSH2.userauth_publickey_fromfile(self, username, username.bytesize.to_u32,
       pubkey, privkey, passphrase) }
   end
@@ -127,6 +130,7 @@ class SSH2::Session
   #
   # Returns false value if authentication was successfull, a string or true otherwise
   def login_with_noauth(username)
+    @socket._wait_write
     handle = nonblock_handle { LibSSH2.userauth_list(self, username, username.bytesize.to_u32) }
     if handle
       String.new handle
@@ -158,7 +162,9 @@ class SSH2::Session
   def disconnect(reason = LibSSH2::DisconnectReason::BY_APPLICATION, description = "bye")
     return unless @connected
     perform_nonblock { LibSSH2.session_disconnect(self, reason, description, "") }
+  rescue
   ensure
+    @socket.close
     @connected = false
   end
 
@@ -425,6 +431,8 @@ class SSH2::Session
 
   def finalize
     disconnect if @connected
+    # Prevents a memory leak: https://github.com/libssh2/libssh2/issues/282
+    LibSSH2.session_handshake(@handle, @socket.fd)
     LibSSH2.session_free(self)
   end
 
