@@ -112,5 +112,6 @@ describe SSH2::SFTP do
         attrs.size.should eq(13)
       end
     end
+    GC.collect
   end
 end

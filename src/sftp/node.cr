@@ -33,5 +33,11 @@ module SSH2::SFTP
     def closed?
       @closed || @sftp.closed?
     end
+
+    def finalize
+      return if closed?
+
+      close rescue nil
+    end
   end
 end
