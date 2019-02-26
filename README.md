@@ -73,7 +73,8 @@ An example of using SFTP API:
 require "ssh2"
 
 SSH2::Session.open("localhost", 2222) do |session|
-  session.login_with_pubkey("root", "./spec/keys/id_rsa")
+  # NOTE:: ED25519 based keys only work on latest versions of libssh2
+  session.login_with_pubkey("root", "./spec/keys/id_rsa", "./spec/keys/id_rsa.pub")
   session.sftp_session do |sftp|
     sftp.open_dir(".").ll do |fn|
       puts fn

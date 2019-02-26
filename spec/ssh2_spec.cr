@@ -6,7 +6,7 @@ def connect_ssh
     if ENV["TRAVIS"]?
       session.login("root", "somepassword")
     else
-      session.login_with_pubkey("root", "./spec/keys/id_rsa")
+      session.login_with_pubkey("root", "./spec/keys/id_rsa", "./spec/keys/id_rsa.pub")
     end
     session.authenticated?.should be_true
     yield session

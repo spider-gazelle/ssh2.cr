@@ -1,5 +1,7 @@
 require "socket"
 
+# TODO:: remove once this is included in core
+# https://github.com/crystal-lang/crystal/pull/7366
 class Socket
   def _wait_read
     wait_readable
@@ -103,13 +105,15 @@ class SSH2::Session
   end
 
   # Login with username using pub/priv key files
-  def login_with_pubkey(username, privkey, pubkey = nil, passphrase = nil)
-    @socket._wait_write
-    perform_nonblock { LibSSH2.userauth_publickey_fromfile(self, username, username.bytesize.to_u32,
-      pubkey, privkey, passphrase) }
+  def login_with_pubkey(username, privkey, pubkey, passphrase = nil)
+    privkey = File.read(privkey)
+    pubkey = File.read(pubkey)
+    login_with_data(username, privkey, pubkey, passphrase)
   end
 
   # Login with username using SSH agent
+  # Warning: this method will block the crystal lang event loop.
+  # Not recommended outside of very small, limited purpose applications.
   def login_with_agent(username)
     agent = Agent.new(self)
     agent.connect
