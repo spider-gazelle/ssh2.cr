@@ -26,7 +26,7 @@ module SSH2::SFTP
       @session.perform_nonblock { LibSSH2.sftp_read(self, slice, LibC::SizeT.new(slice.bytesize)) }
     end
 
-    def write(slice : Slice(UInt8))
+    def write(slice : Slice(UInt8)) : Nil
       @session.perform_nonblock { LibSSH2.sftp_write(self, slice, LibC::SizeT.new(slice.bytesize)) }
     end
   end
