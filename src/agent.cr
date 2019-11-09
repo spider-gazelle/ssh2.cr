@@ -35,10 +35,12 @@ class SSH2::Agent
 
   # Authenticate username with agent
   def authenticate(username)
+    ret : Int32? = nil
     each_unsafe do |key|
-      if LibSSH2.agent_userauth(self, username, key) == 0
-        return true
+      @session.perform_nonblock do
+        ret = LibSSH2.agent_userauth(self, username, key)
       end
+      return true if ret == 0
     end
     raise SSH2Error.new "Failed to authenticate username #{username} with SSH agent"
   end
