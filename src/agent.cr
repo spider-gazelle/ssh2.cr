@@ -39,8 +39,12 @@ class SSH2::Agent
     each_unsafe do |key|
       @session.perform_nonblock do
         ret = LibSSH2.agent_userauth(self, username, key)
+        case ret
+        when 0 then return true
+        when LibSSH2::ERROR_AUTHENTICATION_FAILED then 0
+        else ret
+        end
       end
-      return true if ret == 0
     end
     raise SSH2Error.new "Failed to authenticate username #{username} with SSH agent"
   end

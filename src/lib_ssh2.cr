@@ -115,9 +115,10 @@ lib LibSSH2
     alias Stat = LibC::Stat
   {% end %}
 
-  ERROR_NONE          =   0
-  ERROR_SFTP_PROTOCOL = -31
-  ERROR_EAGAIN        = -37
+  ERROR_NONE                  =   0
+  ERROR_AUTHENTICATION_FAILED = -18
+  ERROR_SFTP_PROTOCOL         = -31
+  ERROR_EAGAIN                = -37
 
   fun session_init = libssh2_session_init_ex(alloc : Void*, free : Void*, realloc : Void*, user_data : Void*) : Session
   fun session_free = libssh2_session_free(session : Session) : Int32
