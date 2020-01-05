@@ -1,17 +1,5 @@
 require "socket"
 
-# TODO:: remove once this is included in core
-# https://github.com/crystal-lang/crystal/pull/7366
-class Socket
-  def _wait_read
-    wait_readable
-  end
-
-  def _wait_write
-    wait_writable
-  end
-end
-
 class SSH2::Session
   getter socket
 
@@ -41,8 +29,8 @@ class SSH2::Session
 
   private def waitsocket
     flags = block_directions
-    @socket._wait_read if flags.inbound?
-    @socket._wait_write if flags.outbound?
+    @socket.wait_readable if flags.inbound?
+    @socket.wait_writable if flags.outbound?
   end
 
   def perform_nonblock
@@ -82,22 +70,22 @@ class SSH2::Session
 
   # Begin transport layer protocol negotiation with the connected host.
   def handshake
-    @socket._wait_read
-    @socket._wait_write
+    @socket.wait_readable
+    @socket.wait_writable
     perform_nonblock { LibSSH2.session_handshake(@handle, @socket.fd) }
     @connected = true
   end
 
   # Login with username and password
   def login(username, password)
-    @socket._wait_write
+    @socket.wait_writable
     perform_nonblock { LibSSH2.userauth_password(self, username, username.bytesize.to_u32,
       password, password.bytesize.to_u32, nil) }
   end
 
   # Login with username using pub/priv key values
   def login_with_data(username, privkey, pubkey, passphrase = nil)
-    @socket._wait_write
+    @socket.wait_writable
     perform_nonblock { LibSSH2.userauth_publickey_frommemory(self, username, username.bytesize.to_u32,
       pubkey, LibC::SizeT.new(pubkey.bytesize),
       privkey, LibC::SizeT.new(privkey.bytesize),
@@ -134,7 +122,7 @@ class SSH2::Session
   #
   # Returns false value if authentication was successfull, a string or true otherwise
   def login_with_noauth(username)
-    @socket._wait_write
+    @socket.wait_writable
     handle = nonblock_handle { LibSSH2.userauth_list(self, username, username.bytesize.to_u32) }
     if handle
       String.new handle
