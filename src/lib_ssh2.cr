@@ -10,7 +10,7 @@ lib LibSSH2
 
   @[Flags]
   enum BlockDirections
-    Inbound,
+    Inbound
     Outbound
   end
 
