@@ -284,6 +284,8 @@ module SSH2
         raise InvalidFilename.new(code, "Invalid filename")
       when 21
         raise LinkLoop.new(code, "Link loop")
+      else
+        raise SFTPError.new(code, "unknown error")
       end
     end
   end
