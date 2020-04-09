@@ -242,6 +242,8 @@ module SSH2
 
     def self.check_error(code)
       case code
+      when 0
+        # Do nothing, success
       when 1
         raise EOF.new(code, "EOF")
       when 2
@@ -285,7 +287,7 @@ module SSH2
       when 21
         raise LinkLoop.new(code, "Link loop")
       else
-        raise SFTPError.new(code, "unknown error")
+        raise SFTPError.new(code, "unknown error #{code}")
       end
     end
   end
