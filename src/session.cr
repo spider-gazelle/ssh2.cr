@@ -120,12 +120,13 @@ class SSH2::Session
   # authentication succeeds, this method with return `nil`. This case may be
   # distinguished from a failing case by examining `authenticated?`.
   #
-  # Returns false value if authentication was successfull, a string or true otherwise
+  # Returns false value if authentication was successfull, an array of supported
+  # methods string or true otherwise
   def login_with_noauth(username)
     @socket.wait_writable
     handle = nonblock_handle { LibSSH2.userauth_list(self, username, username.bytesize.to_u32) }
     if handle
-      String.new handle
+      String.new(handle).split(",")
     else
       !authenticated?
     end
