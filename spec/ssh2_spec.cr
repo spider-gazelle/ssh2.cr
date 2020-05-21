@@ -25,6 +25,19 @@ describe SSH2 do
     end
   end
 
+  it "should be able to connect in interactive mode" do
+    SSH2::Session.open("localhost", 2222) do |session|
+      session.interactive_login("root") { "somepassword" }
+
+      session.open_session do |channel|
+        channel.command("uptime")
+        resp = channel.read_line
+        resp.match(/load average/).should_not be_nil
+        channel.exit_status.should eq(0)
+      end
+    end
+  end
+
   it "should be able to scp transfer file" do
     fn = "#{Time.utc.to_unix}.txt"
     connect_ssh do |session|

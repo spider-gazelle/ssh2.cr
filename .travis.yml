@@ -2,7 +2,7 @@ dist: xenial
 sudo: required
 
 install:
-  - docker pull tutum/ubuntu:trusty
+  - docker pull placeos/ssh-test:latest
   - docker run -d -p 2222:22 -e ROOT_PASS="somepassword" tutum/ubuntu:trusty
   - wget https://launchpad.net/ubuntu/+source/libgpg-error/1.32-1/+build/15118612/+files/libgpg-error0_1.32-1_amd64.deb
   - sudo dpkg -i libgpg-error0_1.32-1_amd64.deb
