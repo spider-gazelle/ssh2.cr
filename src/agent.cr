@@ -40,9 +40,12 @@ class SSH2::Agent
       @session.perform_nonblock do
         ret = LibSSH2.agent_userauth(self, username, key)
         case ret
-        when 0 then return true
-        when LibSSH2::ERROR_AUTHENTICATION_FAILED then 0
-        else ret
+        when 0
+          return true
+        when LibSSH2::ERROR_AUTHENTICATION_FAILED
+          0
+        else
+          ret
         end
       end
     end

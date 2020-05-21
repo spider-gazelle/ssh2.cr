@@ -3,9 +3,14 @@ require "socket"
 class SSH2::Session
   getter socket
 
+  @@callbacks_lock = Mutex.new
+  @@callbacks = {} of UInt64 => Proc(String, String, String)
+
   def initialize(@socket : TCPSocket)
-    @handle = LibSSH2.session_init(nil, nil, nil, nil)
     @request_lock = Mutex.new
+
+    # We need a way to look-up this object when performing interactive logins
+    @handle = LibSSH2.session_init(nil, nil, nil, Pointer(Void).new(self.object_id))
     raise SSH2Error.new "unable to initialize session" unless @handle
     self.blocking = false
     handshake
@@ -79,14 +84,70 @@ class SSH2::Session
   # Login with username and password
   def login(username, password)
     @socket.wait_writable
-    perform_nonblock { LibSSH2.userauth_password(self, username, username.bytesize.to_u32,
+    perform_nonblock { LibSSH2.userauth_password(@handle, username, username.bytesize.to_u32,
       password, password.bytesize.to_u32, nil) }
+  end
+
+  # Callbacks passed to c-code must not capture context
+  INTERACTIVE_CB = Proc(UInt8*, Int32, UInt8*, Int32, Int32, Void*, LibSSH2::Password*, Void*, Void).new do |name, name_len, instruction, instruction_len, num_prompts, _prompts, responses, data|
+    # This is the number of response structures we can fill
+    if num_prompts > 0
+      uname = String.new(name, name_len)
+      welcome = String.new(instruction, instruction_len)
+
+      # Obtain the details of the object that made the request (passed in the initializer)
+      object_id = Pointer(Pointer(Void)).new(data.address)[0].address
+      callback = @@callbacks_lock.synchronize { @@callbacks.delete object_id }
+
+      if callback
+        # Get the password from the callback
+        password = callback.call(uname, welcome)
+
+        # libSSH2 frees the password memory for us so we need to allocate it outside the GC
+        pass_bytes = Pointer(UInt8).new(LibC.malloc(LibC::SizeT.new(password.bytesize)).address)
+        password.to_slice.copy_to(pass_bytes, password.bytesize)
+
+        # Extract the response structure that was passed in and configure it
+        pass = responses[0]
+        pass.password = pass_bytes
+        pass.length = password.bytesize.to_u32
+
+        # Write the bytes back to original address
+        responses.move_from(pointerof(pass), 1)
+      end
+    end
+    nil
+  end
+
+  # Login with an interactive password
+  def interactive_login(username, &callback : Proc(String, String, String))
+    # Capture the context of this request
+    interactive_context = Proc(String, String, String).new do |uname, welcome|
+      pass = callback.call(uname, welcome)
+      @socket.wait_writable
+      pass
+    end
+
+    # Save the context in a global
+    @@callbacks_lock.synchronize { @@callbacks[self.object_id] = interactive_context }
+
+    # Make the request
+    @socket.wait_writable
+    perform_nonblock do
+      LibSSH2.userauth_keyboard_interactive(@handle, username, username.bytesize.to_u32, INTERACTIVE_CB)
+    end
+  ensure
+    @@callbacks_lock.synchronize { @@callbacks.delete object_id }
+  end
+
+  private def password_cb(username : String, welcome : String) : String
+    @interactive_cb.not_nil!.call(username, welcome)
   end
 
   # Login with username using pub/priv key values
   def login_with_data(username, privkey, pubkey, passphrase = nil)
     @socket.wait_writable
-    perform_nonblock { LibSSH2.userauth_publickey_frommemory(self, username, username.bytesize.to_u32,
+    perform_nonblock { LibSSH2.userauth_publickey_frommemory(@handle, username, username.bytesize.to_u32,
       pubkey, LibC::SizeT.new(pubkey.bytesize),
       privkey, LibC::SizeT.new(privkey.bytesize),
       passphrase) }
@@ -124,7 +185,7 @@ class SSH2::Session
   # methods string or true otherwise
   def login_with_noauth(username)
     @socket.wait_writable
-    handle = nonblock_handle { LibSSH2.userauth_list(self, username, username.bytesize.to_u32) }
+    handle = nonblock_handle { LibSSH2.userauth_list(@handle, username, username.bytesize.to_u32) }
     if handle
       String.new(handle).split(",")
     else

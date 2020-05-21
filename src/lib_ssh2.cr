@@ -167,6 +167,25 @@ lib LibSSH2
                                                                             prvkey : UInt8*, prvkey_len : LibC::SizeT,
                                                                             passphrase : UInt8*) : Int32
 
+  struct Password
+    password : UInt8*
+    length : UInt32
+  end
+
+  fun userauth_keyboard_interactive = libssh2_userauth_keyboard_interactive_ex(
+    session : Session,
+    username : UInt8*,
+    username_len : UInt32,
+    response : (UInt8*,  # name
+Int32,                   # name_len
+UInt8*,                  # instruction
+Int32,                   # instruction_len
+Int32,                   # num_prompts
+Void*,                   # prompts
+Password*,               # responses
+Void*) -> Void
+  ) : Int32
+
   fun keepalive_config = libssh2_keepalive_config(session : Session, want_reply : Int32, interval : UInt32)
   fun keepalive_send = libssh2_keepalive_send(session : Session, seconds_to_next : Int32*) : Int32
 
