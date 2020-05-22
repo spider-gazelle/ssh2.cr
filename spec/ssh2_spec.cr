@@ -38,6 +38,13 @@ describe SSH2 do
     end
   end
 
+  it "should obtain a list of supported auth methods" do
+    SSH2::Session.open("localhost", 2222) do |session|
+      methods = session.login_with_noauth("root")
+      methods.should eq(["publickey", "password", "keyboard-interactive"])
+    end
+  end
+
   it "should be able to scp transfer file" do
     fn = "#{Time.utc.to_unix}.txt"
     connect_ssh do |session|
