@@ -402,11 +402,11 @@ class SSH2::Session
   end
 
   # Send a file from a local filesystem to the remote host via SCP.
-  def scp_send_file(path)
+  def scp_send_file(path, remote_path = path)
     if LibC.stat(path, out stat) != 0
-      raise ("Unable to get stat for '#{path}'")
+      raise SSH2Error.new("Unable to get stat for '#{path}'")
     end
-    scp_send(path, (stat.st_mode & 0x3ff).to_i32, stat.st_size.to_u64,
+    scp_send(remote_path, (stat.st_mode & 0x3ff).to_i32, stat.st_size.to_u64,
       stat.st_mtim.tv_sec, stat.st_atim.tv_sec) do |ch|
       File.open(path, "r") do |f|
         IO.copy(f, ch)
@@ -436,28 +436,11 @@ class SSH2::Session
 
   # Download a file from the remote host via SCP to the local filesystem.
   def scp_recv_file(path, local_path = path)
-    min = ->(x : Int32 | Int64, y : Int32 | Int64) { x < y ? x : y }
-
-    # libssh2 scp_recv method has a bug where its channel's read method doesn't
-    # return 0 value to indicate the end of file(EOF). The only way to find EOF
-    # is to download the exact amount of bytes equal to the file size obtained
-    # from Stat struct.
-    scp_recv(path) do |ch, stat|
-      file_size = stat.st_size
-      read_bytes = 0
-      File.open(local_path, "w") do |f|
-        buf = uninitialized UInt8[1024]
-        while read_bytes < file_size
-          bytes_to_read = min.call(buf.length, file_size - read_bytes)
-          len = ch.read(buf.to_slice, bytes_to_read).to_i32
-          f.write(buf.to_slice, len)
-          break if len <= 0
-          read_bytes += len
-        end
-      end
-      if file_size != read_bytes
-        File.delete(local_path)
-        raise SSH2Error.new "Premature end of file"
+    File.open(local_path, "w") do |f|
+      scp_recv(path) do |ch, st|
+        buf = Slice(UInt8).new(st.st_size.to_i32)
+        ch.read(buf)
+        f.write(buf)
       end
     end
   end
