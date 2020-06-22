@@ -102,19 +102,19 @@ class SSH2::Channel < IO
     read(0, slice)
   end
 
-  def write(slice : Slice(UInt8)) : Int64
-    write(0, slice)
-  end
-
   {% if compare_versions(Crystal::VERSION, "0.35.0") == 0 %}
     def write(slice : Bytes) : Int64
-      read(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
+      write(0, slice)
     end
   {% else %}
     def write(slice : Bytes) : Nil
-      read(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
+      write(0, slice)
     end
   {% end %}
+
+  def read_stderr(slice : Slice(UInt8))
+    read(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
+  end
 
   def write_stderr(slice : Slice(UInt8))
     write(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
