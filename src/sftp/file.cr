@@ -26,8 +26,14 @@ module SSH2::SFTP
       @session.perform_nonblock { LibSSH2.sftp_read(self, slice, LibC::SizeT.new(slice.bytesize)) }
     end
 
-    def write(slice : Slice(UInt8)) : Int64
-      @session.perform_nonblock { LibSSH2.sftp_write(self, slice, LibC::SizeT.new(slice.bytesize)) }
-    end
+    {% if compare_versions(Crystal::VERSION, "0.35.0") == 0 %}
+      def write(slice : Bytes) : Int64
+        @session.perform_nonblock { LibSSH2.sftp_write(self, slice, LibC::SizeT.new(slice.bytesize)) }
+      end
+    {% else %}
+      def write(slice : Bytes) : Nil
+        @session.perform_nonblock { LibSSH2.sftp_write(self, slice, LibC::SizeT.new(slice.bytesize)) }
+      end
+    {% end %}
   end
 end

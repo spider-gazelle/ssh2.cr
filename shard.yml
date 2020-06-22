@@ -1,5 +1,5 @@
 name: ssh2
-version: 1.4.0
+version: 1.4.1
 
 development_dependencies:
   ameba:

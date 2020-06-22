@@ -106,9 +106,15 @@ class SSH2::Channel < IO
     write(0, slice)
   end
 
-  def read_stderr(slice : Slice(UInt8))
-    read(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
-  end
+  {% if compare_versions(Crystal::VERSION, "0.35.0") == 0 %}
+    def write(slice : Bytes) : Int64
+      read(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
+    end
+  {% else %}
+    def write(slice : Bytes) : Nil
+      read(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
+    end
+  {% end %}
 
   def write_stderr(slice : Slice(UInt8))
     write(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
@@ -228,9 +234,15 @@ class SSH2::Channel < IO
       @channel.read(@stream_id, slice)
     end
 
-    def write(slice : Slice(UInt8)) : Int64
-      @channel.write(@stream_id, slice)
-    end
+    {% if compare_versions(Crystal::VERSION, "0.35.0") == 0 %}
+      def write(slice : Bytes) : Int64
+        @channel.write(@stream_id, slice)
+      end
+    {% else %}
+      def write(slice : Bytes) : Nil
+        @channel.write(@stream_id, slice)
+      end
+    {% end %}
 
     def flush
       @channel.flush(@stream_id)
