@@ -18,12 +18,12 @@ class SSH2::Session
 
   @handle : Pointer(Void) = Pointer(Void).new(0)
 
-  def self.connect(host, port = 22)
+  def self.connect(host : String, port = 22)
     socket = TCPSocket.new(host, port)
     new(socket)
   end
 
-  def self.open(host, port = 22)
+  def self.open(host : String, port = 22)
     TCPSocket.open(host, port) do |socket|
       session = new(socket)
       begin
@@ -84,7 +84,7 @@ class SSH2::Session
   end
 
   # Login with username and password
-  def login(username, password)
+  def login(username : String, password : String)
     @socket.wait_writable
     perform_nonblock { LibSSH2.userauth_password(@handle, username, username.bytesize.to_u32,
       password, password.bytesize.to_u32, nil) }
@@ -147,25 +147,25 @@ class SSH2::Session
   end
 
   # Login with username using pub/priv key values
-  def login_with_data(username, privkey, pubkey, passphrase = nil)
+  def login_with_data(username : String, privkey : String, pubkey : String, passphrase : String? = nil)
     @socket.wait_writable
     perform_nonblock { LibSSH2.userauth_publickey_frommemory(@handle, username, username.bytesize.to_u32,
       pubkey, LibC::SizeT.new(pubkey.bytesize),
       privkey, LibC::SizeT.new(privkey.bytesize),
-      passphrase) }
+      passphrase ? passphrase.to_slice.to_unsafe : Pointer(UInt8).null) }
   end
 
   # Login with username using pub/priv key files
-  def login_with_pubkey(username, privkey, pubkey, passphrase = nil)
+  def login_with_pubkey(username : String, privkey : String, pubkey : String, passphrase : String? = nil)
     privkey = File.read(privkey)
     pubkey = File.read(pubkey)
-    login_with_data(username, privkey, pubkey, passphrase)
+    login_with_data(username, privkey, pubkey, passphrase ? passphrase.to_slice.to_unsafe : Pointer(UInt8).null)
   end
 
   # Login with username using SSH agent
   # Warning: this method will block the crystal lang event loop.
   # Not recommended outside of very small, limited purpose applications.
-  def login_with_agent(username)
+  def login_with_agent(username : String)
     agent = Agent.new(self)
     agent.connect
     begin
@@ -185,7 +185,7 @@ class SSH2::Session
   #
   # Returns false value if authentication was successfull, an array of supported
   # methods string or true otherwise
-  def login_with_noauth(username)
+  def login_with_noauth(username : String)
     @socket.wait_writable
     handle = nonblock_handle { LibSSH2.userauth_list(@handle, username, username.bytesize.to_u32) }
     if handle
