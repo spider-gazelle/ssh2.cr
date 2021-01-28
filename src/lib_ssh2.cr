@@ -42,10 +42,15 @@ lib LibSSH2
     LANG_SC  = 9
   end
 
+  # https://github.com/libssh2/libssh2/blob/6c7769dcc422250d14af1b06fce378b6ee009440/include/libssh2.h#L423
   enum HostKeyType
-    UNKNOWN = 0
-    RSA     = 1
-    DSS     = 2
+    UNKNOWN   = 0
+    RSA       = 1
+    DSS       = 2
+    ECDSA_256 = 3
+    ECDSA_384 = 4
+    ECDSA_521 = 5
+    ED25519   = 6
   end
 
   enum DisconnectReason
@@ -191,6 +196,7 @@ Void*) -> Void
 
   alias KnownHosts = Void*
 
+  # https://github.com/libssh2/libssh2/blob/6c7769dcc422250d14af1b06fce378b6ee009440/include/libssh2.h#L994
   @[Flags]
   enum TypeMask
     PLAIN  = 1
@@ -200,10 +206,16 @@ Void*) -> Void
     KEYENC_RAW    = (1 << 16)
     KEYENC_BASE64 = (2 << 16)
 
-    KEY_RSA1    = (1 << 18)
-    KEY_SSHRSA  = (2 << 18)
-    KEY_SSHDSS  = (3 << 18)
-    KEY_UNKNOWN = (7 << 18)
+    KEY_RSA1   = (1 << 18)
+    KEY_SSHRSA = (2 << 18)
+    KEY_SSHDSS = (3 << 18)
+
+    KEY_ECDSA_256 = (4 << 18)
+    KEY_ECDSA_384 = (5 << 18)
+    KEY_ECDSA_521 = (6 << 18)
+    KEY_ED25519   = (7 << 18)
+
+    KEY_UNKNOWN = (15 << 18)
   end
 
   enum KnownHostCheck

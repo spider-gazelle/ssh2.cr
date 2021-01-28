@@ -70,13 +70,25 @@ describe SSH2::KnownHosts do
       known_hosts = session.knownhosts
       key, key_type = session.hostkey
       typemask = LibSSH2::TypeMask::PLAIN
+
+      # NOTE:: technically the type mask can be generated programatically
+      # by shifting the key_type integer value by 18
+      # https://github.com/libssh2/libssh2/blob/6c7769dcc422250d14af1b06fce378b6ee009440/include/libssh2.h#L996
       case key_type
       when LibSSH2::HostKeyType::RSA
         typemask |= LibSSH2::TypeMask::KEY_SSHRSA
       when LibSSH2::HostKeyType::DSS
         typemask |= LibSSH2::TypeMask::KEY_SSHDSS
+      when LibSSH2::HostKeyType::ECDSA_256
+        typemask |= LibSSH2::TypeMask::KEY_ECDSA_256
+      when LibSSH2::HostKeyType::ECDSA_384
+        typemask |= LibSSH2::TypeMask::KEY_ECDSA_384
+      when LibSSH2::HostKeyType::ECDSA_521
+        typemask |= LibSSH2::TypeMask::KEY_ECDSA_521
+      when LibSSH2::HostKeyType::ED25519
+        typemask |= LibSSH2::TypeMask::KEY_ED25519
       else
-        fail "unknown key_type"
+        fail "unknown key_type: #{key_type}"
       end
       known_hosts.add("localhost", "", key, "comment", typemask)
       known_hosts.add("127.0.0.1", "", key, "comment", typemask)

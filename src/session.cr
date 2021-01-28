@@ -16,6 +16,8 @@ class SSH2::Session
     handshake
   end
 
+  @handle : Pointer(Void) = Pointer(Void).new(0)
+
   def self.connect(host, port = 22)
     socket = TCPSocket.new(host, port)
     new(socket)
@@ -92,8 +94,8 @@ class SSH2::Session
   INTERACTIVE_CB = Proc(UInt8*, Int32, UInt8*, Int32, Int32, Void*, LibSSH2::Password*, Void*, Void).new do |name, name_len, instruction, instruction_len, num_prompts, _prompts, responses, data|
     # This is the number of response structures we can fill
     if num_prompts > 0
-      uname = String.new(name, name_len)
-      welcome = String.new(instruction, instruction_len)
+      uname = name.null? ? "" : String.new(name, name_len)
+      welcome = instruction.null? ? "" : String.new(instruction, instruction_len)
 
       # Obtain the details of the object that made the request (passed in the initializer)
       object_id = Pointer(Pointer(Void)).new(data.address)[0].address
