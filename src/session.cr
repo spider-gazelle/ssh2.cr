@@ -159,7 +159,7 @@ class SSH2::Session
   def login_with_pubkey(username : String, privkey : String, pubkey : String, passphrase : String? = nil)
     privkey = File.read(privkey)
     pubkey = File.read(pubkey)
-    login_with_data(username, privkey, pubkey, passphrase ? passphrase.to_slice.to_unsafe : Pointer(UInt8).null)
+    login_with_data(username, privkey, pubkey, passphrase)
   end
 
   # Login with username using SSH agent
