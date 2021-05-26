@@ -240,6 +240,7 @@ module SSH2
       super("SFTP Error: #{@code} / #{@reason}")
     end
 
+    # ameba:disable Metrics/CyclomaticComplexity
     def self.check_error(code)
       case code
       when 0

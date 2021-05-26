@@ -1,6 +1,6 @@
 # ssh2.cr
 
-[![CI](https://github.com/spider-gazelle/ssh2/actions/workflows/ci.yml/badge.svg)](https://github.com/spider-gazelle/ssh2/actions/workflows/ci.yml)
+[![CI](https://github.com/spider-gazelle/ssh2.cr/actions/workflows/ci.yml/badge.svg)](https://github.com/spider-gazelle/ssh2.cr/actions/workflows/ci.yml)
 
 This library provides binding for libssh2 library.
 
