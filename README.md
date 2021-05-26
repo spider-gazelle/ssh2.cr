@@ -1,6 +1,6 @@
 # ssh2.cr
 
-[![Build Status](https://travis-ci.org/spider-gazelle/ssh2.cr.svg?branch=master)](https://travis-ci.org/spider-gazelle/ssh2.cr)
+[![CI](https://github.com/spider-gazelle/ssh2/actions/workflows/ci.yml/badge.svg)](https://github.com/spider-gazelle/ssh2/actions/workflows/ci.yml)
 
 This library provides binding for libssh2 library.
 

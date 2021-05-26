@@ -1,8 +1,10 @@
 require "../src/ssh2"
 require "spec"
 
+SPEC_SSH_HOST = ENV["SPEC_SSH_HOST"]? || "localhost"
+
 def connect_ssh
-  SSH2::Session.open("localhost", 2222) do |session|
+  SSH2::Session.open(SPEC_SSH_HOST, 2222) do |session|
     if ENV["TRAVIS"]?
       session.login("root", "somepassword")
     else
@@ -26,7 +28,7 @@ describe SSH2 do
   end
 
   it "should be able to connect in interactive mode" do
-    SSH2::Session.open("localhost", 2222) do |session|
+    SSH2::Session.open(SPEC_SSH_HOST, 2222) do |session|
       session.interactive_login("root") { "somepassword" }
 
       session.open_session do |channel|
@@ -39,7 +41,7 @@ describe SSH2 do
   end
 
   it "should obtain a list of supported auth methods" do
-    SSH2::Session.open("localhost", 2222) do |session|
+    SSH2::Session.open(SPEC_SSH_HOST, 2222) do |session|
       methods = session.login_with_noauth("root")
       methods.should eq(["publickey", "password", "keyboard-interactive"])
     end
@@ -90,12 +92,12 @@ describe SSH2::KnownHosts do
       else
         fail "unknown key_type: #{key_type}"
       end
-      known_hosts.add("localhost", "", key, "comment", typemask)
+      known_hosts.add(SPEC_SSH_HOST, "", key, "comment", typemask)
       known_hosts.add("127.0.0.1", "", key, "comment", typemask)
       known_hosts.size.should eq(2)
-      known_hosts.map(&.name).includes?("localhost").should be_true
+      known_hosts.map(&.name).includes?(SPEC_SSH_HOST).should be_true
       known_hosts.write_file("known_hosts")
-      known_hosts.delete_if { |h| h.name == "localhost" }
+      known_hosts.delete_if { |h| h.name == SPEC_SSH_HOST }
       known_hosts.size.should eq(1)
     end
 
@@ -103,7 +105,7 @@ describe SSH2::KnownHosts do
       known_hosts = session.knownhosts
       known_hosts.read_file("known_hosts")
       key, _ = session.hostkey
-      host = known_hosts.check("localhost", 2222, key, LibSSH2::TypeMask::PLAIN | LibSSH2::TypeMask::KEYENC_RAW)
+      host = known_hosts.check(SPEC_SSH_HOST, 2222, key, LibSSH2::TypeMask::PLAIN | LibSSH2::TypeMask::KEYENC_RAW)
       host.should eq(LibSSH2::KnownHostCheck::MATCH)
     end
     File.delete("known_hosts")
