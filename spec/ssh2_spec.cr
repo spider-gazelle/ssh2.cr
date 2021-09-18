@@ -2,10 +2,11 @@ require "../src/ssh2"
 require "spec"
 
 SPEC_SSH_HOST = ENV["SPEC_SSH_HOST"]? || "localhost"
+SPEC_SSH_PORT = ENV["CI"]? ? 22 : 2222
 
 def connect_ssh
-  SSH2::Session.open(SPEC_SSH_HOST, 2222) do |session|
-    if ENV["TRAVIS"]?
+  SSH2::Session.open(SPEC_SSH_HOST, SPEC_SSH_PORT) do |session|
+    if ENV["CI"]?
       session.login("root", "somepassword")
     else
       session.login_with_pubkey("root", "./spec/keys/id_rsa", "./spec/keys/id_rsa.pub")
@@ -28,7 +29,7 @@ describe SSH2 do
   end
 
   it "should be able to connect in interactive mode" do
-    SSH2::Session.open(SPEC_SSH_HOST, 2222) do |session|
+    SSH2::Session.open(SPEC_SSH_HOST, SPEC_SSH_PORT) do |session|
       session.interactive_login("root") { "somepassword" }
 
       session.open_session do |channel|
@@ -41,7 +42,7 @@ describe SSH2 do
   end
 
   it "should obtain a list of supported auth methods" do
-    SSH2::Session.open(SPEC_SSH_HOST, 2222) do |session|
+    SSH2::Session.open(SPEC_SSH_HOST, SPEC_SSH_PORT) do |session|
       methods = session.login_with_noauth("root")
       methods.should eq(["publickey", "password", "keyboard-interactive"])
     end
@@ -105,7 +106,7 @@ describe SSH2::KnownHosts do
       known_hosts = session.knownhosts
       known_hosts.read_file("known_hosts")
       key, _ = session.hostkey
-      host = known_hosts.check(SPEC_SSH_HOST, 2222, key, LibSSH2::TypeMask::PLAIN | LibSSH2::TypeMask::KEYENC_RAW)
+      host = known_hosts.check(SPEC_SSH_HOST, SPEC_SSH_PORT, key, LibSSH2::TypeMask::PLAIN | LibSSH2::TypeMask::KEYENC_RAW)
       host.should eq(LibSSH2::KnownHostCheck::MATCH)
     end
     File.delete("known_hosts")
