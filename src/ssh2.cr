@@ -1,3 +1,8 @@
+# libssh2 requires the libs that these add to the crystal linker when compiled statically
+# see discussion: https://forum.crystal-lang.org/t/cant-build-static-binary-with-libssh2/4458
+require "openssl"
+require "compress/gzip"
+require "compress/deflate"
 require "./lib_ssh2"
 
 module SSH2
