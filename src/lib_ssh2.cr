@@ -148,8 +148,11 @@ lib LibSSH2
   fun session_supported_algs = libssh2_session_supported_algs(session : Session, type : MethodType, algs : UInt8***) : Int32
 
   enum HashType
-    MD5  = 1
-    SHA1 = 2
+    MD5    = 1
+    SHA1   = 2
+    SHA256 = 3
+    # SHA384 = 4
+    # SHA512 = 5
   end
 
   fun hostkey_hash = libssh2_hostkey_hash(session : Session, type : HashType) : UInt8*
