@@ -385,6 +385,21 @@ class SSH2::Session
     end
   end
 
+  # Tunnel TCP/IP connect through the SSH session to direct UNIX socket.
+  def direct_streamlocal(path, host, port)
+    handle = nonblock_handle { LibSSH2.channel_direct_streamlocal(self, path, host, port) }
+    Channel.new self, handle
+  end
+
+  def direct_streamlocal(path, host, port)
+    channel = direct_streamlocal(path, host, port)
+    begin
+      yield channel
+    ensure
+      channel.close
+    end
+  end
+
   # Send a file to the remote host via SCP.
   def scp_send(path, mode, size, mtime, atime)
     handle = nonblock_handle { LibSSH2.scp_send(self, path, mode.to_i32, size.to_u64,

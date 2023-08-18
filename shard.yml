@@ -2,6 +2,9 @@ name: ssh2
 version: 1.5.3
 crystal: ">= 0.36.1"
 
+libraries:
+  libssh2: ">= 1.11.0"
+
 development_dependencies:
   ameba:
     github: veelenga/ameba
