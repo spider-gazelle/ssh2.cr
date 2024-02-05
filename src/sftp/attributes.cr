@@ -52,19 +52,19 @@ class SSH2::SFTP::Attributes
   end
 
   def atime
-    Time.unix(@stat.atime.to_i32)
+    Time.unix(@stat.atime.to_i64)
   end
 
   def atime=(v : Time)
-    @stat.atime = v.to_utc.to_i.to_u64
+    @stat.atime = v.to_unix
   end
 
   def mtime
-    Time.epoch(@stat.mtime.to_i32)
+    Time.unix(@stat.mtime.to_i64)
   end
 
   def mtime=(v : Time)
-    @stat.mtime = v.to_utc.to_i.to_u64
+    @stat.mtime = v.to_unix
   end
 
   def to_unsafe
