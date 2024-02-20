@@ -201,10 +201,22 @@ class SSH2::Session
   end
 
   # Returns the current session's host key
-  def hashkey(type : LibSSH2::HashType = LibSSH2::HashType::SHA1)
+  def hashkey(type : LibSSH2::HashType = LibSSH2::HashType::SHA256)
     handle = LibSSH2.hostkey_hash(self, type)
     return "" unless handle
-    slice = Slice.new(handle, type == LibSSH2::HashType::SHA1 ? 20 : 16)
+    len = case type
+          in .md5?
+            16
+          in .sha1?
+            20
+          in .sha256?
+            32
+            # in .sha384?
+            #  48
+            # in .sha512?
+            #  64
+          end
+    slice = Slice.new(handle, len)
     String.build do |o|
       slice.each_with_index do |b, idx|
         o << b.to_s(16)
