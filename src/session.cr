@@ -411,7 +411,7 @@ class SSH2::Session
     Channel.new self, handle
   end
 
-  def direct_streamlocal(path, host, port)
+  def direct_streamlocal(path, host, port, &)
     channel = direct_streamlocal(path, host, port)
     begin
       yield channel
