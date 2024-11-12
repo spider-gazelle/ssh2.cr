@@ -282,6 +282,7 @@ Void*) -> Void
                                              message_len : UInt32) : Channel
   fun channel_direct_tcpip = libssh2_channel_direct_tcpip_ex(session : Session, host : UInt8*, port : Int32,
                                                              shost : UInt8*, sport : Int32) : Channel
+  fun channel_direct_streamlocal = libssh2_channel_direct_streamlocal_ex(session : Session, socket_path : UInt8*, shost : UInt8*, sport : Int32) : Channel
   fun channel_close = libssh2_channel_close(ch : Channel) : Int32
   fun channel_eof = libssh2_channel_eof(ch : Channel) : Int32
   fun channel_process_startup = libssh2_channel_process_startup(ch : Channel, request : UInt8*, request_len : UInt32,

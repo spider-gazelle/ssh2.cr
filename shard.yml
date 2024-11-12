@@ -1,5 +1,8 @@
 name: ssh2
-version: 1.6.0
+version: 1.7.0
+
+libraries:
+  libssh2: ">= 1.11.0"
 
 development_dependencies:
   ameba:
