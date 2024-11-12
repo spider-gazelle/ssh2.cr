@@ -16,7 +16,7 @@ class SSH2::Session
     handshake
   end
 
-  @handle : Pointer(Void) = Pointer(Void).new(0)
+  @handle : Pointer(Void) = Pointer(Void).null
 
   def self.connect(host : String, port = 22)
     socket = TCPSocket.new(host, port)

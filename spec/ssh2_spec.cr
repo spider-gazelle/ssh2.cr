@@ -2,15 +2,11 @@ require "../src/ssh2"
 require "spec"
 
 SPEC_SSH_HOST = ENV["SPEC_SSH_HOST"]? || "localhost"
-SPEC_SSH_PORT = ENV["CI"]? ? 22 : 2222
+SPEC_SSH_PORT = ENV["CI"]? ? 22 : 10022
 
 def connect_ssh
   SSH2::Session.open(SPEC_SSH_HOST, SPEC_SSH_PORT) do |session|
-    if ENV["CI"]?
-      session.login("root", "somepassword")
-    else
-      session.login_with_pubkey("root", "./spec/keys/id_rsa", "./spec/keys/id_rsa.pub")
-    end
+    session.login("root", "somepassword")
     session.authenticated?.should be_true
     yield session
   end
@@ -30,6 +26,7 @@ describe SSH2 do
 
   it "should be able to connect in interactive mode" do
     SSH2::Session.open(SPEC_SSH_HOST, SPEC_SSH_PORT) do |session|
+      pending!("container doesn't support interactive login...")
       session.interactive_login("root") { "somepassword" }
 
       session.open_session do |channel|
@@ -117,10 +114,10 @@ describe SSH2::SFTP do
   it "should be able to list directory" do
     connect_ssh do |ssh|
       ssh.sftp_session do |sftp|
-        dir = sftp.open_dir(".")
+        dir = sftp.open_dir("/usr/bin/")
         files = dir.ls
         files.empty?.should be_false
-        files.includes?(".bashrc").should be_true
+        files.includes?("scp").should be_true
       end
     end
   end
@@ -128,11 +125,11 @@ describe SSH2::SFTP do
   it "should be able to retrieve a file" do
     connect_ssh do |ssh|
       ssh.sftp_session do |sftp|
-        file = sftp.open(".bashrc")
+        file = sftp.open("/etc/resolv.conf")
         attrs = file.fstat
         attrs.atime.should be_a(Time)
         attrs.permissions.to_s(8).should eq("100644")
-        file.gets_to_end.should match(/.bashrc/)
+        file.gets_to_end.should match(/nameserver/)
       end
     end
   end

@@ -90,9 +90,10 @@ end
 In order to run test suite you need to pull and run the following docker container:
 
 ```
-$ docker pull tutum/ubuntu:trusty
-$ docker run -d -p 2222:22 -e AUTHORIZED_KEYS="`cat ./spec/keys/id_rsa.pub`" tutum/ubuntu:trusty
+docker compose up -d
 ```
+
+Have a look at the docker-compose.yml file for configuration details
 
 # License
 

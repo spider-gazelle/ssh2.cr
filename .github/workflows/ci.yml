@@ -21,9 +21,9 @@ jobs:
     services:
       # Label used to access the service container
       sshtest:
-        image: placeos/ssh-test:latest
+        image: testcontainers/sshd:1.2.0
         env:
-          ROOT_PASS: somepassword
+          PASSWORD: somepassword
 
     steps:
     - uses: actions/checkout@v2
