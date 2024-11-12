@@ -4,7 +4,7 @@ require "spec"
 SPEC_SSH_HOST = ENV["SPEC_SSH_HOST"]? || "localhost"
 SPEC_SSH_PORT = ENV["CI"]? ? 22 : 10022
 
-def connect_ssh
+def connect_ssh(&)
   SSH2::Session.open(SPEC_SSH_HOST, SPEC_SSH_PORT) do |session|
     session.login("root", "somepassword")
     session.authenticated?.should be_true
@@ -48,16 +48,16 @@ describe SSH2 do
   it "should be able to scp transfer file" do
     fn = "#{Time.utc.to_unix}.txt"
     connect_ssh do |session|
-      session.scp_send(fn, 0o0644, 12) do |ch|
-        ch.puts "hello world"
+      session.scp_send(fn, 0o0644, 12) do |chan|
+        chan.puts "hello world"
       end
-      session.open_session do |ch|
-        ch.command("ls -l")
-        ch.gets_to_end.includes?(fn).should be_true
+      session.open_session do |chan|
+        chan.command("ls -l")
+        chan.gets_to_end.includes?(fn).should be_true
       end
-      session.scp_recv(fn) do |ch, st|
-        buf = Slice(UInt8).new(st.st_size.to_i32)
-        ch.read(buf)
+      session.scp_recv(fn) do |chan, stat|
+        buf = Slice(UInt8).new(stat.st_size.to_i32)
+        chan.read(buf)
         String.new(buf).should eq("hello world\n")
       end
     end
@@ -95,7 +95,7 @@ describe SSH2::KnownHosts do
       known_hosts.size.should eq(2)
       known_hosts.map(&.name).includes?(SPEC_SSH_HOST).should be_true
       known_hosts.write_file("known_hosts")
-      known_hosts.delete_if { |h| h.name == SPEC_SSH_HOST }
+      known_hosts.delete_if { |host| host.name == SPEC_SSH_HOST }
       known_hosts.size.should eq(1)
     end
 

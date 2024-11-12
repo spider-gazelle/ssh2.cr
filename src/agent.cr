@@ -52,7 +52,7 @@ class SSH2::Agent
     raise SSH2Error.new "Failed to authenticate username #{username} with SSH agent"
   end
 
-  def each
+  def each(&)
     each_unsafe do |key|
       yield PublicKey.new(
         Slice.new(key.value.blob, key.value.blob_len),
@@ -60,7 +60,7 @@ class SSH2::Agent
     end
   end
 
-  private def each_unsafe
+  private def each_unsafe(&)
     prev = Pointer(LibSSH2::AgentPublicKey).null
     until LibSSH2.agent_get_identity(self, out store, prev) == 1
       yield store
