@@ -5,7 +5,7 @@ module SSH2::SFTP
     include Node
 
     # Lists a current directory
-    def ls
+    def ls(&)
       loop do
         buf_space = uninitialized UInt8[512]
         buf = buf_space.to_slice
@@ -18,11 +18,11 @@ module SSH2::SFTP
     # Lists a current directory
     def ls
       ret = [] of String
-      ls { |fn| ret << fn }
+      ls { |file_name| ret << file_name }
       ret
     end
 
-    def ll
+    def ll(&)
       loop do
         buf_space = uninitialized UInt8[512]
         buf = buf_space.to_slice
@@ -42,7 +42,7 @@ module SSH2::SFTP
 
     def ll
       ret = [] of String
-      ll { |fn| ret << fn }
+      ll { |file_name| ret << file_name }
       ret
     end
   end

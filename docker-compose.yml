@@ -1,0 +1,7 @@
+services:
+  sshd:
+    image: testcontainers/sshd:1.2.0
+    environment:
+      PASSWORD: "somepassword"
+    ports:
+      - 10022:22

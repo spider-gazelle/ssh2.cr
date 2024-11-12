@@ -13,7 +13,7 @@ class SSH2::Channel < IO
   end
 
   def socket
-    @session.socket.not_nil!
+    @session.socket.as(TCPSocket)
   end
 
   # Close an active data channel. In practice this means sending an

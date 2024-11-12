@@ -29,7 +29,7 @@ class SSH2::KnownHosts
     LibSSH2.knownhost_checkp(self, host, port, key, key.size.to_u64, typemask, out store)
   end
 
-  def delete_if
+  def delete_if(&)
     each_unsafe do |known_host|
       if yield conv_to_host(known_host)
         ret = LibSSH2.knownhost_del(self, known_host)
@@ -53,7 +53,7 @@ class SSH2::KnownHosts
     check_error(ret)
   end
 
-  def each
+  def each(&)
     each_unsafe do |known_host|
       yield conv_to_host(known_host)
     end
@@ -65,7 +65,7 @@ class SSH2::KnownHosts
     Host.new(name, key, known_host.value.typemask)
   end
 
-  private def each_unsafe
+  private def each_unsafe(&)
     prev = Pointer(LibSSH2::KnownHost).null
     until LibSSH2.knownhost_get(self, out store, prev) == 1
       yield store

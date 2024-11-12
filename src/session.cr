@@ -16,14 +16,14 @@ class SSH2::Session
     handshake
   end
 
-  @handle : Pointer(Void) = Pointer(Void).new(0)
+  @handle : Pointer(Void) = Pointer(Void).null
 
   def self.connect(host : String, port = 22)
     socket = TCPSocket.new(host, port)
     new(socket)
   end
 
-  def self.open(host : String, port = 22)
+  def self.open(host : String, port = 22, &)
     TCPSocket.open(host, port) do |socket|
       session = new(socket)
       begin
@@ -40,7 +40,7 @@ class SSH2::Session
     @socket.wait_writable if flags.outbound?
   end
 
-  def perform_nonblock
+  def perform_nonblock(&)
     loop do
       result = @request_lock.synchronize { yield }
       code = if result.is_a?(Tuple)
@@ -57,7 +57,7 @@ class SSH2::Session
     end
   end
 
-  def nonblock_handle
+  def nonblock_handle(&)
     loop do
       result = @request_lock.synchronize { yield }
       handle = if result.is_a?(Tuple)
@@ -142,10 +142,6 @@ class SSH2::Session
     @@callbacks_lock.synchronize { @@callbacks.delete object_id }
   end
 
-  private def password_cb(username : String, welcome : String) : String
-    @interactive_cb.not_nil!.call(username, welcome)
-  end
-
   # Login with username using pub/priv key values
   def login_with_data(username : String, privkey : String, pubkey : String, passphrase : String? = nil)
     @socket.wait_writable
@@ -201,14 +197,26 @@ class SSH2::Session
   end
 
   # Returns the current session's host key
-  def hashkey(type : LibSSH2::HashType = LibSSH2::HashType::SHA1)
+  def hashkey(type : LibSSH2::HashType = LibSSH2::HashType::SHA256)
     handle = LibSSH2.hostkey_hash(self, type)
     return "" unless handle
-    slice = Slice.new(handle, type == LibSSH2::HashType::SHA1 ? 20 : 16)
-    String.build do |o|
-      slice.each_with_index do |b, idx|
-        o << b.to_s(16)
-        o << ":" unless idx == length - 1
+    len = case type
+          in .md5?
+            16
+          in .sha1?
+            20
+          in .sha256?
+            32
+            # in .sha384?
+            #  48
+            # in .sha512?
+            #  64
+          end
+    slice = Slice.new(handle, len)
+    String.build do |outp|
+      slice.each_with_index do |byte, idx|
+        outp << byte.to_s(16)
+        outp << ":" unless idx == length - 1
       end
     end
   end
@@ -275,14 +283,26 @@ class SSH2::Session
   end
 
   # If set, libssh2 will not attempt to block SIGPIPEs but will let them trigger from the underlying socket layer.
+  @[Deprecated("Use `#enable_sigpipe=` instead")]
+  # ameba:disable Naming/AccessorMethodName
   def set_enable_sigpipe(value)
+    self.enable_sigpipe = value
+  end
+
+  def enable_sigpipe=(value)
     perform_nonblock { LibSSH2.session_flag(self, LibSSH2::SessionFlag::SIGPIPE, value ? 1 : 0) }
   end
 
   # If set - before the connection negotiation is performed - libssh2 will try
   # to negotiate compression enabling for this connection. By default libssh2
   # will not attempt to use compression.
+  @[Deprecated("Use `#enable_compression=` instead")]
+  # ameba:disable Naming/AccessorMethodName
   def set_enable_compression(value)
+    self.enable_compression = value
+  end
+
+  def enable_compression=(value)
     perform_nonblock { LibSSH2.session_flag(self, LibSSH2::SessionFlag::COMPRESS, value ? 1 : 0) }
   end
 
@@ -358,7 +378,7 @@ class SSH2::Session
     open_channel("session", LibSSH2::CHANNEL_WINDOW_DEFAULT, LibSSH2::CHANNEL_PACKET_DEFAULT, nil)
   end
 
-  def open_session
+  def open_session(&)
     channel = open_session
     begin
       yield channel
@@ -376,7 +396,7 @@ class SSH2::Session
     Channel.new self, handle
   end
 
-  def direct_tcpip(host, port, source_host, source_port)
+  def direct_tcpip(host, port, source_host, source_port, &)
     channel = direct_tcpip(host, port, source_host, source_port)
     begin
       yield channel
@@ -409,7 +429,7 @@ class SSH2::Session
 
   # Send a file to the remote host via SCP.
   # A new channel is passed to the block and closed afterwards.
-  def scp_send(path, mode, size, mtime = Time.utc.to_unix, atime = Time.utc.to_unix)
+  def scp_send(path, mode, size, mtime = Time.utc.to_unix, atime = Time.utc.to_unix, &)
     channel = scp_send(path, mode, size, mtime, atime)
     begin
       yield channel
@@ -424,9 +444,9 @@ class SSH2::Session
       raise SSH2Error.new("Unable to get stat for '#{path}'")
     end
     scp_send(remote_path, (stat.st_mode & 0x3ff).to_i32, stat.st_size.to_u64,
-      stat.st_mtim.tv_sec, stat.st_atim.tv_sec) do |ch|
-      File.open(path, "r") do |f|
-        IO.copy(f, ch)
+      stat.st_mtim.tv_sec, stat.st_atim.tv_sec) do |chan|
+      File.open(path, "r") do |file|
+        IO.copy(file, chan)
       end
     end
   end
@@ -442,7 +462,7 @@ class SSH2::Session
 
   # Request a file from the remote host via SCP.
   # A new channel is passed to the block and closed afterwards.
-  def scp_recv(path)
+  def scp_recv(path, &)
     channel, stat = scp_recv(path)
     begin
       yield channel, stat
@@ -453,11 +473,11 @@ class SSH2::Session
 
   # Download a file from the remote host via SCP to the local filesystem.
   def scp_recv_file(path, local_path = path)
-    File.open(local_path, "w") do |f|
-      scp_recv(path) do |ch, st|
-        buf = Slice(UInt8).new(st.st_size.to_i32)
-        ch.read(buf)
-        f.write(buf)
+    File.open(local_path, "w") do |file|
+      scp_recv(path) do |chan, stat|
+        buf = Slice(UInt8).new(stat.st_size.to_i32)
+        chan.read(buf)
+        file.write(buf)
       end
     end
   end
@@ -469,7 +489,7 @@ class SSH2::Session
     SFTP::Session.new(self, handle)
   end
 
-  def sftp_session
+  def sftp_session(&)
     sftp = sftp_session
     begin
       yield sftp

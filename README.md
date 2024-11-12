@@ -7,7 +7,6 @@ This library provides binding for libssh2 library.
 
 # Requirements
 
-- Crystal language version 0.7.0 and higher.
 - libssh2 version 1.5.0 or higher
 
 You can use `homebrew` to install the latest libssh2:
@@ -90,9 +89,10 @@ end
 In order to run test suite you need to pull and run the following docker container:
 
 ```
-$ docker pull tutum/ubuntu:trusty
-$ docker run -d -p 2222:22 -e AUTHORIZED_KEYS="`cat ./spec/keys/id_rsa.pub`" tutum/ubuntu:trusty
+docker compose up -d
 ```
+
+Have a look at the docker-compose.yml file for configuration details
 
 # License
 
