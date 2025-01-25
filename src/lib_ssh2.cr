@@ -1,4 +1,4 @@
-@[Link("ssh2")]
+@[Link("ssh2", pkg_config: "libssh2")]
 lib LibSSH2
   alias Session = Void*
 
