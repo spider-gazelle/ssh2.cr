@@ -34,11 +34,26 @@ class SSH2::Session
     end
   end
 
-  private def waitsocket
-    flags = block_directions
-    @socket.wait_readable if flags.inbound?
-    @socket.wait_writable if flags.outbound?
-  end
+  # this lib is not compatible with crystal 1.15
+  {% if compare_versions(Crystal::VERSION, "1.15.0") == 0 || compare_versions(Crystal::VERSION, "1.15.1") == 0 %}
+    {% raise "ssh2.cr is not compatible with crystal version 1.15" %}
+  {% end %}
+
+  alias Directions = LibSSH2::BlockDirections
+
+  {% if compare_versions(Crystal::VERSION, "1.14.1") <= 0 %}
+    private def waitsocket(direction : Directions = block_directions)
+      @socket.wait_readable if direction.inbound?
+      @socket.wait_writable if direction.outbound?
+    end
+  {% else %}
+    # this works for crystal 1.16 and above
+    private def waitsocket(direction : Directions = block_directions)
+      event_loop = Crystal::EventLoop.current
+      event_loop.wait_readable(@socket) if direction.inbound?
+      event_loop.wait_writable(@socket) if direction.outbound?
+    end
+  {% end %}
 
   def perform_nonblock(&)
     loop do
@@ -77,15 +92,14 @@ class SSH2::Session
 
   # Begin transport layer protocol negotiation with the connected host.
   def handshake
-    @socket.wait_readable
-    @socket.wait_writable
+    waitsocket(Directions::All)
     perform_nonblock { LibSSH2.session_handshake(@handle, @socket.fd) }
     @connected = true
   end
 
   # Login with username and password
   def login(username : String, password : String)
-    @socket.wait_writable
+    waitsocket(Directions::Outbound)
     perform_nonblock { LibSSH2.userauth_password(@handle, username, username.bytesize.to_u32,
       password, password.bytesize.to_u32, nil) }
   end
@@ -126,7 +140,7 @@ class SSH2::Session
     # Capture the context of this request
     interactive_context = Proc(String, String, String).new do |uname, welcome|
       pass = callback.call(uname, welcome)
-      @socket.wait_writable
+      waitsocket(Directions::Outbound)
       pass
     end
 
@@ -134,7 +148,7 @@ class SSH2::Session
     @@callbacks_lock.synchronize { @@callbacks[self.object_id] = interactive_context }
 
     # Make the request
-    @socket.wait_writable
+    waitsocket(Directions::Outbound)
     perform_nonblock do
       LibSSH2.userauth_keyboard_interactive(@handle, username, username.bytesize.to_u32, INTERACTIVE_CB)
     end
@@ -144,7 +158,7 @@ class SSH2::Session
 
   # Login with username using pub/priv key values
   def login_with_data(username : String, privkey : String, pubkey : String, passphrase : String? = nil)
-    @socket.wait_writable
+    waitsocket(Directions::Outbound)
     perform_nonblock { LibSSH2.userauth_publickey_frommemory(@handle, username, username.bytesize.to_u32,
       pubkey, LibC::SizeT.new(pubkey.bytesize),
       privkey, LibC::SizeT.new(privkey.bytesize),
@@ -182,7 +196,7 @@ class SSH2::Session
   # Returns false value if authentication was successfull, an array of supported
   # methods string or true otherwise
   def login_with_noauth(username : String)
-    @socket.wait_writable
+    waitsocket(Directions::Outbound)
     handle = nonblock_handle { LibSSH2.userauth_list(@handle, username, username.bytesize.to_u32) }
     if handle
       String.new(handle).split(",")
