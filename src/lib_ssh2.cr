@@ -191,7 +191,7 @@ Int32,                   # instruction_len
 Int32,                   # num_prompts
 Void*,                   # prompts
 Password*,               # responses
-Void*) -> Void
+Void*) -> Void,
   ) : Int32
 
   fun keepalive_config = libssh2_keepalive_config(session : Session, want_reply : Int32, interval : UInt32)
