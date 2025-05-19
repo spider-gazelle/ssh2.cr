@@ -8,7 +8,6 @@ class SSH2::Session
 
   def initialize(@socket : TCPSocket)
     @request_lock = Mutex.new
-
     # We need a way to look-up this object when performing interactive logins
     @handle = LibSSH2.session_init(nil, nil, nil, Pointer(Void).new(self.object_id))
     raise SSH2Error.new "unable to initialize session" unless @handle
@@ -49,9 +48,59 @@ class SSH2::Session
   {% else %}
     # this works for crystal 1.16 and above
     private def waitsocket(direction : Directions = block_directions)
-      event_loop = Crystal::EventLoop.current
-      event_loop.wait_readable(@socket) if direction.inbound?
-      event_loop.wait_writable(@socket) if direction.outbound?
+      # Set a timeout to prevent infinite blocking
+      timeout_seconds = 5
+      
+      # Define a channel to communicate between fibers
+      io_ready_channel = ::Channel(Bool).new
+      
+      if direction.inbound?
+        # Spawn a fiber to wait for socket readability
+        spawn do
+          begin
+            Crystal::EventLoop.current.wait_readable(@socket)
+            io_ready_channel.send(true)
+          rescue ex
+            io_ready_channel.send(false)
+          end
+        end
+        
+        # Wait with timeout
+        begin
+          select
+          when io_ready_channel.receive
+            # Socket is readable
+          when timeout(timeout_seconds.seconds)
+            # Timeout occurred
+          end
+        rescue ex
+          # Handle exception
+        end
+      end
+      
+      if direction.outbound?
+        # Spawn a fiber to wait for socket writability
+        spawn do
+          begin
+            Crystal::EventLoop.current.wait_writable(@socket)
+            io_ready_channel.send(true)
+          rescue ex
+            io_ready_channel.send(false)
+          end
+        end
+        
+        # Wait with timeout
+        begin
+          select
+          when io_ready_channel.receive
+            # Socket is writable
+          when timeout(timeout_seconds.seconds)
+            # Timeout occurred
+          end
+        rescue ex
+          # Handle exception
+        end
+      end
     end
   {% end %}
 
