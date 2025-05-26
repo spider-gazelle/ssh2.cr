@@ -92,14 +92,14 @@ class SSH2::Session
 
   # Begin transport layer protocol negotiation with the connected host.
   def handshake
-    waitsocket(Directions::All)
+    # waitsocket(Directions::All)
     perform_nonblock { LibSSH2.session_handshake(@handle, @socket.fd) }
     @connected = true
   end
 
   # Login with username and password
   def login(username : String, password : String)
-    waitsocket(Directions::Outbound)
+    # waitsocket(Directions::Outbound)
     perform_nonblock { LibSSH2.userauth_password(@handle, username, username.bytesize.to_u32,
       password, password.bytesize.to_u32, nil) }
   end
@@ -140,7 +140,7 @@ class SSH2::Session
     # Capture the context of this request
     interactive_context = Proc(String, String, String).new do |uname, welcome|
       pass = callback.call(uname, welcome)
-      waitsocket(Directions::Outbound)
+      # waitsocket(Directions::Outbound)
       pass
     end
 
@@ -148,7 +148,7 @@ class SSH2::Session
     @@callbacks_lock.synchronize { @@callbacks[self.object_id] = interactive_context }
 
     # Make the request
-    waitsocket(Directions::Outbound)
+    # waitsocket(Directions::Outbound)
     perform_nonblock do
       LibSSH2.userauth_keyboard_interactive(@handle, username, username.bytesize.to_u32, INTERACTIVE_CB)
     end
@@ -158,7 +158,7 @@ class SSH2::Session
 
   # Login with username using pub/priv key values
   def login_with_data(username : String, privkey : String, pubkey : String, passphrase : String? = nil)
-    waitsocket(Directions::Outbound)
+    # waitsocket(Directions::Outbound)
     perform_nonblock { LibSSH2.userauth_publickey_frommemory(@handle, username, username.bytesize.to_u32,
       pubkey, LibC::SizeT.new(pubkey.bytesize),
       privkey, LibC::SizeT.new(privkey.bytesize),
@@ -196,7 +196,7 @@ class SSH2::Session
   # Returns false value if authentication was successfull, an array of supported
   # methods string or true otherwise
   def login_with_noauth(username : String)
-    waitsocket(Directions::Outbound)
+    # waitsocket(Directions::Outbound)
     handle = nonblock_handle { LibSSH2.userauth_list(@handle, username, username.bytesize.to_u32) }
     if handle
       String.new(handle).split(",")
