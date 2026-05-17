@@ -41,14 +41,22 @@ class SSH2::Session
 
   alias Directions = LibSSH2::BlockDirections
 
+  # libssh2 can return EAGAIN with bd == 0 (send_existing in transport.c).
+  # waiting on neither side spins the fiber until read_timeout. assume outbound.
+  # https://github.com/libssh2/libssh2/pull/1945
+  private def resolved_directions
+    dir = block_directions
+    dir.none? ? Directions::Outbound : dir
+  end
+
   {% if compare_versions(Crystal::VERSION, "1.14.1") <= 0 %}
-    private def waitsocket(direction : Directions = block_directions)
+    private def waitsocket(direction : Directions = resolved_directions)
       @socket.wait_readable if direction.inbound?
       @socket.wait_writable if direction.outbound?
     end
   {% else %}
     # this works for crystal 1.16 and above
-    private def waitsocket(direction : Directions = block_directions)
+    private def waitsocket(direction : Directions = resolved_directions)
       event_loop = Crystal::EventLoop.current
       event_loop.wait_readable(@socket) if direction.inbound?
       event_loop.wait_writable(@socket) if direction.outbound?
