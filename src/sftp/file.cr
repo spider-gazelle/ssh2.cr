@@ -22,8 +22,8 @@ module SSH2::SFTP
       LibSSH2.sftp_tell(self)
     end
 
-    def read(slice : Slice(UInt8))
-      @session.perform_nonblock { LibSSH2.sftp_read(self, slice, LibC::SizeT.new(slice.bytesize)) }
+    def read(slice : Slice(UInt8)) : Int32
+      @session.perform_nonblock { LibSSH2.sftp_read(self, slice, LibC::SizeT.new(slice.bytesize)) }.to_i32
     end
 
     {% if compare_versions(Crystal::VERSION, "0.35.0") == 0 %}

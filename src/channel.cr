@@ -97,9 +97,9 @@ class SSH2::Channel < IO
     @session.perform_nonblock { LibSSH2.channel_write(self, stream_id, slice, LibC::SizeT.new(slice.bytesize)) }
   end
 
-  def read(slice : Slice(UInt8))
+  def read(slice : Slice(UInt8)) : Int32
     return 0 if eof?
-    read(0, slice)
+    read(0, slice).to_i32
   end
 
   {% if compare_versions(Crystal::VERSION, "0.35.0") == 0 %}
@@ -230,8 +230,8 @@ class SSH2::Channel < IO
     def initialize(@channel, @stream_id)
     end
 
-    def read(slice : Slice(UInt8))
-      @channel.read(@stream_id, slice)
+    def read(slice : Slice(UInt8)) : Int32
+      @channel.read(@stream_id, slice).to_i32
     end
 
     {% if compare_versions(Crystal::VERSION, "0.35.0") == 0 %}
