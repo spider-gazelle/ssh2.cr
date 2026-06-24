@@ -1,5 +1,5 @@
 name: ssh2
-version: 1.7.3
+version: 1.7.4
 
 libraries:
   libssh2: ">= 1.11.0"
