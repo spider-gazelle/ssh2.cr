@@ -1,9 +1,9 @@
 class SSH2::Agent
   struct PublicKey
-    getter public_key
-    getter comment
+    getter public_key : Bytes
+    getter comment : String
 
-    def initiation(@public_key, @comment)
+    def initialize(@public_key, @comment)
     end
   end
 
@@ -62,7 +62,10 @@ class SSH2::Agent
 
   private def each_unsafe(&)
     prev = Pointer(LibSSH2::AgentPublicKey).null
-    until LibSSH2.agent_get_identity(self, out store, prev) == 1
+    loop do
+      rc = LibSSH2.agent_get_identity(self, out store, prev)
+      break if rc == 1 # 1 == no more identities
+      check_error(rc)  # rc < 0 raises instead of looping forever
       yield store
       prev = store
     end

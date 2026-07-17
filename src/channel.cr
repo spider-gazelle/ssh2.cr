@@ -93,8 +93,20 @@ class SSH2::Channel < IO
     @session.perform_nonblock { LibSSH2.channel_read(self, stream_id, slice, LibC::SizeT.new(slice.bytesize)) }
   end
 
+  # channel_write can write less than we asked. loop until slice is done.
+  # n == 0 is allowed by libssh2 (buffered, not acked). yield so we don't spin.
   def write(stream_id, slice : Slice(UInt8))
-    @session.perform_nonblock { LibSSH2.channel_write(self, stream_id, slice, LibC::SizeT.new(slice.bytesize)) }
+    written = 0
+    while written < slice.bytesize
+      remainder = slice + written
+      n = @session.perform_nonblock { LibSSH2.channel_write(self, stream_id, remainder, LibC::SizeT.new(remainder.bytesize)) }
+      if n == 0
+        Fiber.yield
+      else
+        written += n.to_i32
+      end
+    end
+    written
   end
 
   def read(slice : Slice(UInt8)) : Int32
@@ -169,7 +181,8 @@ class SSH2::Channel < IO
                io = IO::Memory.new
                modes.each do |tuple|
                  io.write_byte(tuple[0].to_u8)
-                 io.write_bytes(tuple[1])
+                 # RFC 4254: terminal-mode values are uint32 in network byte order
+                 io.write_bytes(tuple[1], IO::ByteFormat::BigEndian)
                end
                io.write_byte(0u8)
                io.to_slice
@@ -212,7 +225,10 @@ class SSH2::Channel < IO
   end
 
   def finalize
-    @session.perform_nonblock { LibSSH2.channel_free(@handle) } if @owned
+    # best-effort, no fiber-yielding I/O in the GC finalizer (see Session#finalize)
+    LibSSH2.channel_free(@handle) if @owned
+  rescue
+    nil
   end
 
   def to_unsafe

@@ -26,6 +26,11 @@ module SSH2::SFTP::Base
   end
 
   def finalize
-    close unless @closed
+    return if @closed
+    @closed = true
+    # best-effort, no fiber-yielding I/O in the GC finalizer (see Session#finalize)
+    LibSSH2.sftp_shutdown(@handle)
+  rescue
+    nil
   end
 end

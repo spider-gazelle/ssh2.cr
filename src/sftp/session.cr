@@ -38,6 +38,11 @@ module SSH2::SFTP
       @session.perform_nonblock { LibSSH2.sftp_mkdir(self, path, path.bytesize.to_u32, mode.to_i64) }
     end
 
+    # Remove a directory on the remote file system.
+    def rmdir(path)
+      @session.perform_nonblock { LibSSH2.sftp_rmdir(self, path, path.bytesize.to_u32) }
+    end
+
     private def convert_to_fxf(mode)
       flags = LibSSH2::FXF::None
       if mode.includes?("r")
@@ -78,26 +83,33 @@ module SSH2::SFTP
 
     # Create a new symlink
     def symlink(path, target)
-      @session.perform_nonblock { LibSSH2.sftp_symlink(self, path, path.bytesize.to_u32, target, target_len.to_u32, LibSSH2::LinkType::SYMLINK) }
+      @session.perform_nonblock { LibSSH2.sftp_symlink(self, path, path.bytesize.to_u32, target, target.bytesize.to_u32, LibSSH2::LinkType::SYMLINK) }
     end
 
+    # Resolve the target of a symlink.
     def readlink(path)
       buf_space = uninitialized UInt8[512]
       buf = buf_space.to_slice
-      ret = @session.perform_nonblock { LibSSH2.sftp_symlink(self, path, buf, buf.length.to_u32, LibSSH2::LinkType::READLINK) }
+      ret = @session.perform_nonblock { LibSSH2.sftp_symlink(self, path, path.bytesize.to_u32, buf, buf.size.to_u32, LibSSH2::LinkType::READLINK) }
       String.new buf[0, ret]
     end
 
-    def readlink(path)
+    # Resolve `path` to an absolute canonical path.
+    def realpath(path)
       buf_space = uninitialized UInt8[512]
       buf = buf_space.to_slice
-      ret = @session.perform_nonblock { LibSSH2.sftp_symlink(self, path, buf, buf.length.to_u32, LibSSH2::LinkType::REALPATH) }
-      check_error(ret)
+      ret = @session.perform_nonblock { LibSSH2.sftp_symlink(self, path, path.bytesize.to_u32, buf, buf.size.to_u32, LibSSH2::LinkType::REALPATH) }
       String.new buf[0, ret]
     end
 
-    def ulink(filename)
+    # Delete a file on the remote filesystem.
+    def unlink(filename)
       @session.perform_nonblock { LibSSH2.sftp_unlink(self, filename, filename.bytesize.to_u32) }
+    end
+
+    @[Deprecated("Use `#unlink` instead")]
+    def ulink(filename)
+      unlink(filename)
     end
 
     # Rename a filesystem object on the remote filesystem.

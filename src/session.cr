@@ -1,7 +1,7 @@
 require "socket"
 
 class SSH2::Session
-  getter socket
+  getter socket : TCPSocket
 
   @@callbacks_lock = Mutex.new
   @@callbacks = {} of UInt64 => Proc(String, String, String)
@@ -237,8 +237,8 @@ class SSH2::Session
     slice = Slice.new(handle, len)
     String.build do |outp|
       slice.each_with_index do |byte, idx|
-        outp << byte.to_s(16)
-        outp << ":" unless idx == length - 1
+        outp << byte.to_s(16).rjust(2, '0')
+        outp << ":" unless idx == slice.size - 1
       end
     end
   end
@@ -333,7 +333,9 @@ class SSH2::Session
   def hostkey
     handle = LibSSH2.session_hostkey(self, out len, out ty)
     raise SSH2Error.new "unable to obtain hostkey" unless handle
-    {Slice.new(handle, len.to_i32), LibSSH2::HostKeyType.new(ty)}
+    # from_value? (not .new) so an unknown/newer key type degrades to UNKNOWN
+    # rather than producing an invalid enum value
+    {Slice.new(handle, len.to_i32), LibSSH2::HostKeyType.from_value?(ty) || LibSSH2::HostKeyType::UNKNOWN}
   end
 
   # Set preferred methods to be negotiated. These preferences must be set prior
@@ -344,9 +346,9 @@ class SSH2::Session
   end
 
   # Returns the actual method negotiated for a particular transport parameter.
-  def method_pref(method_pref : LibSSH2::MethodType)
+  def method_pref(method_type : LibSSH2::MethodType)
     handle = LibSSH2.session_methods(self, method_type)
-    String.new handle unless handle
+    String.new handle if handle
   end
 
   # Get a list of supported algorithms for the given method_type.
@@ -356,6 +358,8 @@ class SSH2::Session
       count.times do |i|
         ret << String.new(algs[i])
       end
+      # the array is allocated by libssh2 and must be released by us
+      LibSSH2.free(self, algs.as(Void*))
     end
     ret
   end
@@ -369,6 +373,13 @@ class SSH2::Session
       {code, seconds_to_next}
     end
     seconds
+  end
+
+  # Configure how often keepalive messages should be sent. `interval` is in
+  # seconds (0, the default, disables keepalive); `want_reply` asks the remote
+  # to acknowledge each keepalive. Must be called after `handshake`.
+  def keepalive_config(interval, want_reply = true)
+    LibSSH2.keepalive_config(self, want_reply ? 1 : 0, interval.to_u32)
   end
 
   # Return `KnownHosts` object that allows managing known hosts
@@ -465,8 +476,11 @@ class SSH2::Session
     if LibC.stat(path, out stat) != 0
       raise SSH2Error.new("Unable to get stat for '#{path}'")
     end
+    # darwin's LibC::Stat exposes st_mtimespec/st_atimespec, not st_mtim/st_atim
+    mtime = {% if flag?(:darwin) %} stat.st_mtimespec.tv_sec {% else %} stat.st_mtim.tv_sec {% end %}
+    atime = {% if flag?(:darwin) %} stat.st_atimespec.tv_sec {% else %} stat.st_atim.tv_sec {% end %}
     scp_send(remote_path, (stat.st_mode & 0x3ff).to_i32, stat.st_size.to_u64,
-      stat.st_mtim.tv_sec, stat.st_atim.tv_sec) do |chan|
+      mtime, atime) do |chan|
       File.open(path, "r") do |file|
         IO.copy(file, chan)
       end
@@ -497,9 +511,17 @@ class SSH2::Session
   def scp_recv_file(path, local_path = path)
     File.open(local_path, "w") do |file|
       scp_recv(path) do |chan, stat|
-        buf = Slice(UInt8).new(stat.st_size.to_i32)
-        chan.read(buf)
-        file.write(buf)
+        # a single channel read is partial: loop until the whole file (st_size
+        # bytes) has been received, otherwise the tail is left zero-padded.
+        remaining = stat.st_size.to_i64
+        buffer = Bytes.new(32768)
+        while remaining > 0
+          chunk = remaining < buffer.size ? remaining.to_i32 : buffer.size
+          n = chan.read(buffer[0, chunk])
+          break if n == 0
+          file.write(buffer[0, n])
+          remaining -= n
+        end
       end
     end
   end
@@ -526,10 +548,13 @@ class SSH2::Session
   end
 
   def finalize
-    disconnect if @connected
-    # Prevents a memory leak: https://github.com/libssh2/libssh2/issues/282
-    LibSSH2.session_handshake(@handle, @socket.fd)
-    LibSSH2.session_free(self)
+    # Finalizers run in the GC context, where waitsocket (used by
+    # perform_nonblock, via disconnect) would reschedule a fiber — which is not
+    # safe here. Release the session best-effort with no fiber-yielding I/O;
+    # explicit teardown (disconnect / the `open` block form) still runs normally.
+    LibSSH2.session_free(@handle) unless @handle.null?
+  rescue
+    nil
   end
 
   private def check_error(code)
