@@ -10,14 +10,17 @@ module SSH2::SFTP
       @session.perform_nonblock { LibSSH2.sftp_fsync(self) }
     end
 
+    # Move the read/write position to `offset` bytes from the start of the file.
     def seek(offset)
       LibSSH2.sftp_seek(self, offset.to_u64)
     end
 
+    # Reset the read/write position to the start of the file.
     def rewind
       seek(0)
     end
 
+    # Return the current read/write position, in bytes from the start.
     def tell
       LibSSH2.sftp_tell(self)
     end

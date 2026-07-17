@@ -22,6 +22,8 @@ module SSH2::SFTP
       ret
     end
 
+    # Lists the current directory in long form, yielding each entry's full
+    # listing line (as returned by the server) when available, otherwise its name.
     def ll(&)
       loop do
         buf_space = uninitialized UInt8[512]
@@ -40,6 +42,7 @@ module SSH2::SFTP
       end
     end
 
+    # Returns the current directory's long-form listing as an array.
     def ll
       ret = [] of String
       ll { |file_name| ret << file_name }

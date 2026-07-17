@@ -117,6 +117,8 @@ module SSH2::SFTP
       @session.perform_nonblock { LibSSH2.sftp_rename(self, src, src.bytesize.to_u32, dst, dst.bytesize.to_u32, flags) }
     end
 
+    # Shut down the SFTP subsystem. Called automatically by the `sftp_session`
+    # block form.
     def close
       return if @closed
       @closed = true

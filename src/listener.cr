@@ -1,3 +1,5 @@
+# A server-side listener for reverse (remote) port forwarding, created by
+# `Session#forward_listen`. Inbound connections are queued until `accept`ed.
 class SSH2::Listener
   getter session : Session
   getter bound_port : Int32
@@ -11,11 +13,13 @@ class SSH2::Listener
     @canceled
   end
 
+  # Accept the next queued inbound connection, returning it as a `Channel`.
   def accept
     handle = session.nonblock_handle { LibSSH2.channel_forward_accept(self) }
     Channel.new(session, handle)
   end
 
+  # Stop listening and tell the remote host to stop forwarding to this port.
   def cancel
     return if canceled?
     session.perform_nonblock { LibSSH2.channel_forward_cancel(self) }
