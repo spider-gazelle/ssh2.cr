@@ -351,7 +351,7 @@ class SSH2::Session
   # the raw verdict. Encapsulates the host-key-type -> typemask mapping so callers
   # do not have to. A missing file yields NOTFOUND; an unknown key type yields FAILURE.
   def verify_known_host(name : String, port : Int32,
-                        path : String = File.expand_path("~/.ssh/known_hosts")) : LibSSH2::KnownHostCheck
+                        path : String = File.expand_path("~/.ssh/known_hosts", home: true)) : LibSSH2::KnownHostCheck
     return LibSSH2::KnownHostCheck::NOTFOUND unless File.exists?(path)
 
     key, key_type = hostkey
