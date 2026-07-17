@@ -33,6 +33,7 @@ class SSH2::Channel < IO
     @closed
   end
 
+  # Wait for the remote end to acknowledge the channel close.
   def wait_closed
     @session.perform_nonblock { LibSSH2.channel_wait_closed(self) }
   end
@@ -57,6 +58,8 @@ class SSH2::Channel < IO
     process_startup(PROCESS_SUBSYSTEM, subsystem)
   end
 
+  # Request a process on the channel. `request` is one of `PROCESS_SHELL`,
+  # `PROCESS_EXEC` or `PROCESS_SUBSYSTEM`; prefer `shell`, `command` or `subsystem`.
   def process_startup(request, message)
     @session.perform_nonblock { LibSSH2.channel_process_startup(self, request, request.bytesize.to_u32,
       message, message ? message.bytesize.to_u32 : 0_u32) }
@@ -89,10 +92,15 @@ class SSH2::Channel < IO
     @session.perform_nonblock { LibSSH2.channel_handle_extended_data(self, ignore_mode) }
   end
 
+  # Read up to `slice.bytesize` bytes from substream `stream_id` into `slice`,
+  # returning the number of bytes read.
   def read(stream_id, slice : Slice(UInt8))
     @session.perform_nonblock { LibSSH2.channel_read(self, stream_id, slice, LibC::SizeT.new(slice.bytesize)) }
   end
 
+  # Write all of `slice` to substream `stream_id`, returning the number of bytes
+  # written.
+  #
   # channel_write can write less than we asked. loop until slice is done.
   # n == 0 is allowed by libssh2 (buffered, not acked). yield so we don't spin.
   def write(stream_id, slice : Slice(UInt8))
@@ -109,6 +117,8 @@ class SSH2::Channel < IO
     written
   end
 
+  # `IO#read`: reads from the main (stdout) substream into `slice`, returning the
+  # number of bytes read, or `0` at end-of-file.
   def read(slice : Slice(UInt8)) : Int32
     return 0 if eof?
     read(0, slice).to_i32
@@ -124,10 +134,12 @@ class SSH2::Channel < IO
     end
   {% end %}
 
+  # Read from the channel's stderr substream into `slice`.
   def read_stderr(slice : Slice(UInt8))
     read(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
   end
 
+  # Write `slice` to the channel's stderr substream.
   def write_stderr(slice : Slice(UInt8))
     write(LibSSH2::SSH_EXTENDED_DATA_STDERR, slice)
   end
@@ -152,10 +164,12 @@ class SSH2::Channel < IO
     flush(LibSSH2::CHANNEL_FLUSH_EXTENDED_DATA)
   end
 
+  # Returns the channel's stderr substream as its own `IO` (`StreamIO`).
   def err_stream
     StreamIO.new(self, LibSSH2::SSH_EXTENDED_DATA_STDERR)
   end
 
+  # Returns substream `stream_id` as its own `IO` (`StreamIO`).
   def stream(stream_id)
     StreamIO.new(self, stream_id)
   end
@@ -239,6 +253,7 @@ class SSH2::Channel < IO
     SessionError.check_error(@session, code)
   end
 
+  # Exposes a single channel substream (e.g. stderr) as a standalone `IO`.
   class StreamIO < IO
     getter channel : Channel
     getter stream_id : Int32
@@ -260,6 +275,7 @@ class SSH2::Channel < IO
       end
     {% end %}
 
+    # Flush this substream.
     def flush
       @channel.flush(@stream_id)
     end

@@ -1,4 +1,7 @@
+# Talks to the local ssh-agent (via `SSH_AUTH_SOCK`) to authenticate a session
+# with one of the identities it holds. See `Session#login_with_agent`.
 class SSH2::Agent
+  # A public key held by the agent: its raw `public_key` blob and its `comment`.
   struct PublicKey
     getter public_key : Bytes
     getter comment : String
@@ -52,6 +55,8 @@ class SSH2::Agent
     raise SSH2Error.new "Failed to authenticate username #{username} with SSH agent"
   end
 
+  # Yield each identity held by the agent as a `PublicKey`. Call
+  # `list_identities` first to populate the collection.
   def each(&)
     each_unsafe do |key|
       yield PublicKey.new(
@@ -64,8 +69,9 @@ class SSH2::Agent
     prev = Pointer(LibSSH2::AgentPublicKey).null
     loop do
       rc = LibSSH2.agent_get_identity(self, out store, prev)
-      break if rc == 1 # 1 == no more identities
-      check_error(rc)  # rc < 0 raises instead of looping forever
+      # 1 means no more identities; a negative rc raises instead of looping forever
+      break if rc == 1
+      check_error(rc)
       yield store
       prev = store
     end

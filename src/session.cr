@@ -63,6 +63,9 @@ class SSH2::Session
     end
   {% end %}
 
+  # Runs the block, retrying on `EAGAIN` (waiting on the socket in between) until
+  # libssh2 returns a real result; raises on error. Wraps calls that return an
+  # integer status. Used internally by every blocking libssh2 operation.
   def perform_nonblock(&)
     loop do
       result = @request_lock.synchronize { yield }
@@ -80,6 +83,8 @@ class SSH2::Session
     end
   end
 
+  # Like `perform_nonblock`, but for libssh2 calls that return a handle/pointer
+  # (EAGAIN is detected via `session_last_errno` when the handle is null).
   def nonblock_handle(&)
     loop do
       result = @request_lock.synchronize { yield }
@@ -311,6 +316,8 @@ class SSH2::Session
     self.enable_sigpipe = value
   end
 
+  # When set, libssh2 lets SIGPIPE fire from the underlying socket instead of
+  # blocking it.
   def enable_sigpipe=(value)
     perform_nonblock { LibSSH2.session_flag(self, LibSSH2::SessionFlag::SIGPIPE, value ? 1 : 0) }
   end
@@ -324,6 +331,8 @@ class SSH2::Session
     self.enable_compression = value
   end
 
+  # When set before `handshake`, libssh2 will try to negotiate compression for
+  # the connection (off by default). Must be set prior to `handshake`.
   def enable_compression=(value)
     perform_nonblock { LibSSH2.session_flag(self, LibSSH2::SessionFlag::COMPRESS, value ? 1 : 0) }
   end
@@ -411,6 +420,7 @@ class SSH2::Session
     open_channel("session", LibSSH2::CHANNEL_WINDOW_DEFAULT, LibSSH2::CHANNEL_PACKET_DEFAULT, nil)
   end
 
+  # Yields an open session channel and closes it when the block returns.
   def open_session(&)
     channel = open_session
     begin
@@ -429,6 +439,7 @@ class SSH2::Session
     Channel.new self, handle
   end
 
+  # Yields the tunnel channel and closes it when the block returns.
   def direct_tcpip(host, port, source_host, source_port, &)
     channel = direct_tcpip(host, port, source_host, source_port)
     begin
@@ -444,6 +455,7 @@ class SSH2::Session
     Channel.new self, handle
   end
 
+  # Yields the tunnel channel and closes it when the block returns.
   def direct_streamlocal(path, host, port, &)
     channel = direct_streamlocal(path, host, port)
     begin
@@ -533,6 +545,7 @@ class SSH2::Session
     SFTP::Session.new(self, handle)
   end
 
+  # Yields the SFTP session and closes it when the block returns.
   def sftp_session(&)
     sftp = sftp_session
     begin
