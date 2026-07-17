@@ -1,39 +1,225 @@
+---
 name: CI
+
+permissions: {}
+
 on:
   push:
+    branches:
+      - '**'
+    paths-ignore:
+      - "**.md"
   pull_request:
-    branches: [master]
+    branches:
+      - '**'
+    paths-ignore:
+      - "**.md"
   schedule:
     - cron: "0 6 * * 1"
+  workflow_dispatch:
+
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        crystal:
-          - latest
-    runs-on: ${{ matrix.os }}
-    container: crystallang/crystal:${{ matrix.crystal }}-alpine
-
-    services:
-      # Label used to access the service container
-      sshtest:
-        image: testcontainers/sshd:1.2.0
-        env:
-          PASSWORD: somepassword
-
+  format:
+    runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Install LibSSH2
-      run: apk add --no-cache libssh2 libssh2-dev libssh2-static
-    - name: Install dependencies
-      run: shards install --ignore-crystal-version
-    - name: Lint
-      run: ./bin/ameba
-    - name: Format
-      run: crystal tool format --check
-    - name: Run tests
-      run: crystal spec -v --error-trace
-      env:
-        SPEC_SSH_HOST: sshtest
+      - name: Git checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Check formatting
+        run: mise dev:format-check
+
+  ameba:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Install dependencies
+        run: mise dev:deps
+
+      - name: Run static code analysis
+        run: mise dev:ameba
+
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Install dependencies
+        run: mise dev:deps
+
+      - name: Build API docs
+        run: mise dev:docs
+
+  test_linux_amd64:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Install libssh2
+        run: sudo apt-get update && sudo apt-get install -y libssh2-1-dev
+
+      - name: Install dependencies
+        run: mise dev:deps
+
+      - name: Run tests
+        run: mise dev:spec
+
+      - name: Run tests (multi-threaded)
+        run: mise dev:spec-mt
+
+  test_linux_arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Install libssh2
+        run: sudo apt-get update && sudo apt-get install -y libssh2-1-dev
+
+      - name: Install dependencies
+        run: mise dev:deps
+
+      - name: Run tests
+        run: mise dev:spec
+
+      - name: Run tests (multi-threaded)
+        run: mise dev:spec-mt
+
+  # Best-effort early warning against the Crystal nightly compiler. mise has no
+  # nightly build, so this job uses the nightly container directly and is allowed
+  # to fail.
+  test_nightly_linux:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container: crystallang/crystal:nightly
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install libssh2
+        run: apt-get update && apt-get install -y libssh2-1-dev
+
+      - name: Install dependencies
+        run: shards install --skip-postinstall --skip-executables
+
+      - name: Run tests
+        run: crystal spec --error-trace
+
+      - name: Run tests (multi-threaded)
+        run: crystal spec --error-trace -Dpreview_mt
+        env:
+          CRYSTAL_WORKERS: "4"
+
+  test_macos_arm64:
+    runs-on: macos-26
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Install libssh2
+        run: brew install libssh2
+
+      # TODO: remove me when https://github.com/crystal-lang/crystal/issues/16746 is fixed
+      - name: Fix Crystal shards
+        run: mise dev:fix-shards-command
+
+      - name: Install dependencies
+        run: mise dev:deps
+
+      - name: Run tests
+        run: mise dev:spec
+
+      - name: Run tests (multi-threaded)
+        run: mise dev:spec-mt
+
+  test_macos_amd64:
+    runs-on: macos-26-intel
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Install libssh2
+        run: brew install libssh2
+
+      # TODO: remove me when https://github.com/crystal-lang/crystal/issues/16746 is fixed
+      - name: Fix Crystal shards
+        run: mise dev:fix-shards-command
+
+      - name: Install dependencies
+        run: mise dev:deps
+
+      - name: Run tests
+        run: mise dev:spec
+
+      - name: Run tests (multi-threaded)
+        run: mise dev:spec-mt
+
+  # Opt-in suite driving a real SSH server (docker compose), gated behind
+  # -Dintegration so the unit jobs above stay serverless. Linux only: the
+  # GitHub-hosted macOS runners have no Docker.
+  test_integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup mise
+        uses: jdx/mise-action@v4
+
+      - name: Install libssh2
+        run: sudo apt-get update && sudo apt-get install -y libssh2-1-dev
+
+      - name: Install dependencies
+        run: mise dev:deps
+
+      - name: Start the SSH server
+        run: mise dev:ssh-up
+
+      - name: Run the integration suite
+        run: mise dev:spec-integration
+
+      - name: Stop the SSH server
+        if: always()
+        run: mise dev:ssh-down

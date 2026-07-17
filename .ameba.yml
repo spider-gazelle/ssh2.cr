@@ -1,0 +1,6 @@
+# integration_helper is shared support for the integration suite, not a spec
+# file (like spec_helper). Keep the default spec_helper exemption too.
+Lint/SpecFilename:
+  IgnoredFilenames:
+    - spec_helper
+    - integration_helper
