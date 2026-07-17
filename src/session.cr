@@ -477,11 +477,8 @@ class SSH2::Session
       raise SSH2Error.new("Unable to get stat for '#{path}'")
     end
     # darwin's LibC::Stat exposes st_mtimespec/st_atimespec, not st_mtim/st_atim
-    {% if flag?(:darwin) %}
-      mtime, atime = stat.st_mtimespec.tv_sec, stat.st_atimespec.tv_sec
-    {% else %}
-      mtime, atime = stat.st_mtim.tv_sec, stat.st_atim.tv_sec
-    {% end %}
+    mtime = {% if flag?(:darwin) %} stat.st_mtimespec.tv_sec {% else %} stat.st_mtim.tv_sec {% end %}
+    atime = {% if flag?(:darwin) %} stat.st_atimespec.tv_sec {% else %} stat.st_atim.tv_sec {% end %}
     scp_send(remote_path, (stat.st_mode & 0x3ff).to_i32, stat.st_size.to_u64,
       mtime, atime) do |chan|
       File.open(path, "r") do |file|

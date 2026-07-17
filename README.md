@@ -1,6 +1,8 @@
 # ssh2.cr
 
 [![CI](https://github.com/spider-gazelle/ssh2.cr/actions/workflows/ci.yml/badge.svg)](https://github.com/spider-gazelle/ssh2.cr/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/spider-gazelle/ssh2.cr)](https://github.com/spider-gazelle/ssh2.cr/releases)
+[![License](https://img.shields.io/github/license/spider-gazelle/ssh2.cr)](LICENSE)
 
 This library provides binding for libssh2 library.
 
@@ -13,6 +15,22 @@ You can use `homebrew` to install the latest libssh2:
 
 ```
 $ brew install libssh2
+```
+
+# Installation
+
+Add the shard to your `shard.yml`:
+
+```yaml
+dependencies:
+  ssh2:
+    github: spider-gazelle/ssh2.cr
+```
+
+Then run:
+
+```
+shards install
 ```
 
 # Goal
@@ -41,7 +59,7 @@ An example of running shell:
 ```crystal
 require "ssh2"
 
-session = SSH2::Session.open("localhost", 2222)
+session = SSH2::Session.connect("localhost", 2222)
 session.login("root", "somepassword")
 channel = session.open_session
 
@@ -63,6 +81,19 @@ raw_data = Bytes.new(2048)
 loop do
   bytes_read = channel.read(raw_data)
   puts String.new(raw_data[0, bytes_read])
+end
+```
+
+An example of transferring files over SCP:
+
+```crystal
+require "ssh2"
+
+SSH2::Session.open("localhost", 2222) do |session|
+  session.login("root", "somepassword")
+  # upload a local file, then download it back
+  session.scp_send_file("./hello.txt", "/tmp/hello.txt")
+  session.scp_recv_file("/tmp/hello.txt", "./hello-copy.txt")
 end
 ```
 

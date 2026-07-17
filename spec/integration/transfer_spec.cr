@@ -45,4 +45,26 @@ describe "SSH2 large transfers" do
       end
     end
   end
+
+  # Round-trips a real local file through scp_send_file + scp_recv_file. Also
+  # exercises the platform-specific stat fields used by scp_send_file.
+  it "round-trips a local file through scp_send_file / scp_recv_file" do
+    payload = "the quick brown fox\n" * 5000 # > one SSH packet
+    src = ::File.tempname("ssh2_scp_src", ".txt")
+    dst = ::File.tempname("ssh2_scp_dst", ".txt")
+    ::File.write(src, payload)
+    remote = "/tmp/ssh2_scp_#{Time.utc.to_unix_ns}.txt"
+    begin
+      Integration.connect do |session|
+        session.scp_send_file(src, remote)
+      end
+      Integration.connect do |session|
+        session.scp_recv_file(remote, dst)
+      end
+      ::File.read(dst).should eq(payload)
+    ensure
+      ::File.delete?(src)
+      ::File.delete?(dst)
+    end
+  end
 end
