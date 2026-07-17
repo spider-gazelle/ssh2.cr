@@ -1,12 +1,12 @@
 require "../src/ssh2"
 
 SSH2::Session.open("localhost", 2222) do |session|
-  session.login_with_pubkey("root", "./spec/keys/id_rsa")
+  session.login_with_pubkey("root", "./spec/keys/id_rsa", "./spec/keys/id_rsa.pub")
   session.sftp_session do |sftp|
     sftp.open_dir(".").ll do |file_name|
       puts file_name
     end
     file = sftp.open(".bashrc")
-    puts file.read
+    puts file.gets_to_end
   end
 end

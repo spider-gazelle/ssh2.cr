@@ -5,22 +5,20 @@ SSH2::Session.open("my_server") do |session|
   session.open_session do |chan|
     chan.request_pty("vt100")
     chan.shell
-    session.blocking = false
 
-    buf_space = Bytes.new(1024)
-    buf = buf_space.to_slice
-    loop do
-      io = IO.select([STDIN, chan.socket]).first
-      if io == STDIN
-        command = gets
-        if command
-          chan.write(command.to_slice)
-        end
-      elsif io == chan.socket
-        len = chan.read(buf).to_i32
-        print! String.new buf[0, len]
-        break if chan.eof?
+    # forward local STDIN to the remote shell in a background fiber
+    spawn do
+      while line = gets
+        chan.write("#{line}\n".to_slice)
       end
+      chan.send_eof
+    end
+
+    # stream the remote output until the channel reports EOF
+    buf = Bytes.new(1024)
+    until chan.eof?
+      len = chan.read(buf)
+      print String.new(buf[0, len]) if len > 0
     end
   end
 end

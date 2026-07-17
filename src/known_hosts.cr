@@ -67,7 +67,10 @@ class SSH2::KnownHosts
 
   private def each_unsafe(&)
     prev = Pointer(LibSSH2::KnownHost).null
-    until LibSSH2.knownhost_get(self, out store, prev) == 1
+    loop do
+      rc = LibSSH2.knownhost_get(self, out store, prev)
+      break if rc == 1 # 1 == no more hosts
+      check_error(rc)  # rc < 0 raises instead of looping forever
       yield store
       prev = store
     end

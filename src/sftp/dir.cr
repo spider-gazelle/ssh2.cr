@@ -35,7 +35,7 @@ module SSH2::SFTP
         if lbuf[0] == 0_u8
           yield String.new(buf[0, ret])
         else
-          yield String.new(lbuf)
+          yield String.new(lbuf.to_unsafe)
         end
       end
     end
