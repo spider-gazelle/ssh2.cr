@@ -1,0 +1,56 @@
+[tools]
+crystal = "1.20.3"
+
+[vars]
+# Add --verbose only in an interactive terminal (TTY check)
+SPEC_OPTS = "{% if exec(command='(tty -s && echo true) || echo false') == 'true' %}--verbose{% endif %}"
+
+[tasks."dev:deps"]
+description = "Install dependencies (also builds bin/ameba)"
+run = "shards install"
+
+[tasks."dev:format"]
+description = "Format the source"
+run = "crystal tool format src/ spec/"
+
+[tasks."dev:format-check"]
+description = "Check formatting"
+run = "crystal tool format --check"
+
+[tasks."dev:ameba"]
+description = "Run static code analysis"
+run = "bin/ameba"
+
+[tasks."dev:spec"]
+description = "Run the serverless unit spec suite"
+run = "crystal spec --error-trace {{vars.SPEC_OPTS}}"
+
+[tasks."dev:spec-mt"]
+description = "Run the unit spec suite multi-threaded (fiber-safety gate)"
+run = "crystal spec --error-trace -Dpreview_mt {{vars.SPEC_OPTS}}"
+env = { CRYSTAL_WORKERS = "4" }
+
+[tasks."dev:docs"]
+description = "Build the API docs (fails on doc-comment / compile errors)"
+run = "crystal docs"
+
+[tasks."dev:check"]
+description = "Format-check, lint and unit-test in one shot"
+run = "mise dev:format-check && mise dev:ameba && mise dev:spec && mise dev:spec-mt"
+
+[tasks."dev:ssh-up"]
+description = "Start the integration SSH server (docker compose)"
+run = "docker compose up -d --wait"
+
+[tasks."dev:ssh-down"]
+description = "Stop and wipe the integration SSH server"
+run = "docker compose down -v"
+
+[tasks."dev:spec-integration"]
+description = "Run the e2e suite against the live SSH server (needs dev:ssh-up)"
+run = "crystal spec --error-trace -Dintegration {{vars.SPEC_OPTS}}"
+
+# TODO: remove me when https://github.com/crystal-lang/crystal/issues/16746 is fixed
+[tasks."dev:fix-shards-command"]
+description = "Fix missing shards command on macOS"
+run = "cp $HOME/.local/share/mise/installs/crystal/{{tools.crystal.version}}/embedded/bin/shards $HOME/.local/share/mise/installs/crystal/{{tools.crystal.version}}/bin/"

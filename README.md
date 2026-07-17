@@ -7,7 +7,7 @@ This library provides binding for libssh2 library.
 
 # Requirements
 
-- libssh2 version 1.5.0 or higher
+- libssh2 version 1.11.0 or higher
 
 You can use `homebrew` to install the latest libssh2:
 
@@ -84,15 +84,38 @@ SSH2::Session.open("localhost", 2222) do |session|
 end
 ```
 
+# Development
+
+This project uses [mise](https://mise.jdx.dev) to manage the Crystal toolchain and
+the developer tasks (`mise tasks` lists them all). Install the dependencies with:
+
+```
+mise dev:deps
+```
+
 # Testing
 
-In order to run test suite you need to pull and run the following docker container:
+The suite is split in two tiers:
 
-```
-docker compose up -d
-```
+- **Unit specs** are serverless and run everywhere:
 
-Have a look at the docker-compose.yml file for configuration details
+  ```
+  mise dev:spec       # single-threaded
+  mise dev:spec-mt    # multi-threaded (fiber-safety gate)
+  ```
+
+- **Integration specs** drive a real SSH server (a `testcontainers/sshd` container
+  defined in `docker-compose.yml`) and are gated behind `-Dintegration`:
+
+  ```
+  mise dev:ssh-up             # start the container
+  mise dev:spec-integration   # run the e2e suite
+  mise dev:ssh-down           # stop it
+  ```
+
+Connection settings default to the container (`localhost:10022`, `root` /
+`somepassword`) and can be overridden via the `SPEC_SSH_HOST`, `SPEC_SSH_PORT`,
+`SPEC_SSH_USER` and `SPEC_SSH_PASS` environment variables.
 
 # License
 
