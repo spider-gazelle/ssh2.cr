@@ -225,7 +225,10 @@ class SSH2::Channel < IO
   end
 
   def finalize
-    @session.perform_nonblock { LibSSH2.channel_free(@handle) } if @owned
+    # best-effort, no fiber-yielding I/O in the GC finalizer (see Session#finalize)
+    LibSSH2.channel_free(@handle) if @owned
+  rescue
+    nil
   end
 
   def to_unsafe

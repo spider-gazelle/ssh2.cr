@@ -23,7 +23,12 @@ class SSH2::Listener
   end
 
   def finalize
-    cancel unless canceled?
+    return if canceled?
+    @canceled = true
+    # best-effort, no fiber-yielding I/O in the GC finalizer (see Session#finalize)
+    LibSSH2.channel_forward_cancel(@handle)
+  rescue
+    nil
   end
 
   def to_unsafe

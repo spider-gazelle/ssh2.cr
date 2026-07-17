@@ -551,10 +551,13 @@ class SSH2::Session
   end
 
   def finalize
-    disconnect if @connected
-    # Prevents a memory leak: https://github.com/libssh2/libssh2/issues/282
-    LibSSH2.session_handshake(@handle, @socket.fd)
-    LibSSH2.session_free(self)
+    # Finalizers run in the GC context, where waitsocket (used by
+    # perform_nonblock, via disconnect) would reschedule a fiber — which is not
+    # safe here. Release the session best-effort with no fiber-yielding I/O;
+    # explicit teardown (disconnect / the `open` block form) still runs normally.
+    LibSSH2.session_free(@handle) unless @handle.null?
+  rescue
+    nil
   end
 
   private def check_error(code)
