@@ -347,6 +347,30 @@ class SSH2::Session
     {Slice.new(handle, len.to_i32), LibSSH2::HostKeyType.from_value?(ty) || LibSSH2::HostKeyType::UNKNOWN}
   end
 
+  # Verifies the session's host key against an OpenSSH known_hosts file, returning
+  # the raw verdict. Encapsulates the host-key-type -> typemask mapping so callers
+  # do not have to. A missing file yields NOTFOUND; an unknown key type yields FAILURE.
+  def verify_known_host(name : String, port : Int32,
+                        path : String = File.expand_path("~/.ssh/known_hosts", home: true)) : LibSSH2::KnownHostCheck
+    return LibSSH2::KnownHostCheck::NOTFOUND unless File.exists?(path)
+
+    key, key_type = hostkey
+    key_mask = case key_type
+               when LibSSH2::HostKeyType::RSA       then LibSSH2::TypeMask::KEY_SSHRSA
+               when LibSSH2::HostKeyType::DSS       then LibSSH2::TypeMask::KEY_SSHDSS
+               when LibSSH2::HostKeyType::ECDSA_256 then LibSSH2::TypeMask::KEY_ECDSA_256
+               when LibSSH2::HostKeyType::ECDSA_384 then LibSSH2::TypeMask::KEY_ECDSA_384
+               when LibSSH2::HostKeyType::ECDSA_521 then LibSSH2::TypeMask::KEY_ECDSA_521
+               when LibSSH2::HostKeyType::ED25519   then LibSSH2::TypeMask::KEY_ED25519
+               else                                      nil
+               end
+    return LibSSH2::KnownHostCheck::FAILURE if key_mask.nil?
+
+    kh = knownhosts
+    kh.read_file(path)
+    kh.check(name, port, key, LibSSH2::TypeMask::PLAIN | LibSSH2::TypeMask::KEYENC_RAW | key_mask)
+  end
+
   # Set preferred methods to be negotiated. These preferences must be set prior
   # to calling `handshake`, as they are used during the protocol initiation
   # phase.
